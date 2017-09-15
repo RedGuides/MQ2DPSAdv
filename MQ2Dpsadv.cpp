@@ -2,6 +2,7 @@
 // MQ2DPSAdv.cpp
 
 #include "../MQ2Plugin.h"
+using namespace std;
 PreSetup("MQ2DPSAdv");
 #include <vector>
 #include "MQ2DPSAdv.h"
@@ -607,7 +608,7 @@ int CDPSAdvWnd::WndNotification(CXWnd *pWnd, unsigned int Message, void *unknown
       }
    } else if (Message == 14) {
 	   CHAR szTemp[MAX_STRING] = { 0 };
-      GetCXStr(((CSidlScreenWnd*)pWnd)->InputText, szTemp);
+      GetCXStr(((CEditWnd*)pWnd)->InputText, szTemp);
       if (pWnd == (CXWnd*)TShowMeMin) {
          if (strlen(szTemp)) {
             szTemp[2] = 0;
