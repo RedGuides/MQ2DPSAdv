@@ -63,6 +63,12 @@ This update includes UI XML Changes. Make sure you replace the old UI File.
 == 2/03/09 == 1.1 (Warnen)
 * Release
 
+== 1/6/19 == 1.2 (Chatwiththisname)
+Added 2 new colors for Others DoTs and Others Non-Melee
+Changed the color of your DoTs
+Fixed DoTs and Non-Melee Damage for self and others
+Added "shoot" for YourHits and "shoots" for OtherHits to parse.
+
 */
 
 // ############################### DPSEntry Start ############################################
@@ -745,14 +751,20 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 	   return false;
    else
 	   *Damage = atoi(strpbrk(Line, "1234567890"));
-   int MobEnd = (int)(strstr(Line, " was hit by non-melee for ") - Line);
-   if (MobEnd > 0) {
-      strncpy_s(MobName, &Line[0], MobEnd);
-      MobName[MobEnd] = 0;
-      strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
-      return true;
+   char temp[MAX_STRING] = "";
+   sprintf_s(temp, " for %i", *Damage);
+   int MobEnd = (int)(strstr(Line, temp) - Line);
+   //If this was a direct damage ability [EntName] hit [MobName] for [Damage] points of non-melee damage.
+   if (MobEnd > 0 && strstr(Line, ((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+	   //WriteChatf("MobEnd: %i", MobEnd);
+	   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+	   sprintf_s(temp, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+	   strncpy_s(MobName, &Line[strlen(temp)+5], MobEnd - strlen(temp) - 5);
+       MobName[MobEnd] = 0;
+       return true;
    }
-   int EntEnd = (int)(strstr(Line, " hit ") - Line);
+   sprintf_s(temp, " hit %s", MobName);
+   int EntEnd = (int)(strstr(Line, temp) - Line);
    if (EntEnd <= 0) return false;
    strncpy_s(EntName, &Line[0], EntEnd);
    EntName[EntEnd] = 0;
@@ -785,15 +797,23 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
    if (*Damage <= 0 || strstr(Line, " damage by "))
 	   return false;
    int MobEnd = (int)(strstr(Line, " has taken ") - Line);
-   int EntEnd = (int)(strstr(Line, " by ") - Line);
 
    if (strstr(Line, " damage from your "))
 	   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
    else {
+	  int EntEnd = (int)(strstr(Line, ".") - Line-6);
       if (MobEnd <= 0 || EntEnd <= 0) return false;
-      int EntStart = (int)(strstr(Line, " damage from ") - Line);
-      strncpy_s(EntName, &Line[EntStart + 13], EntEnd - EntStart - 13);
-      EntName[EntEnd - EntStart - 13] = 0;
+      int SpellNameStart = (int)(strstr(Line, " damage from ") - Line);
+	  int SpellNameEnd = (int)(strstr(Line, " by ") - Line);
+	  char temp[MAX_STRING] = "";
+      strncpy_s(temp, &Line[SpellNameStart + 13], SpellNameEnd - SpellNameStart - 13);
+	  //WriteChatf("SpellNametemp: %s", temp);
+	  int EntStart = (int)(strstr(Line,temp) - Line + strlen(temp)+4);
+	  //WriteChatf("EntStart: %i EntEnd: %i", EntStart, EntEnd);
+	  strcpy_s(EntName, &Line[EntEnd, EntStart]);
+	  //WriteChatf("EntName: %s", EntName);
+      EntName[EntEnd - EntStart+6] = 0;
+	  //WriteChatf("EntName: %s", EntName);
    }
    strncpy_s(MobName, &Line[0], MobEnd);
    int Corpse = (int)(strstr(MobName, "'s corpse") - MobName);
@@ -809,6 +829,7 @@ void HandleNonMelee(PCHAR Line) {
    int Damage;
    if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 	   return;
+   //WriteChatf("MobName: %s Damage: %i EntName: %s", MobName, Damage, EntName);
    GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -817,6 +838,7 @@ void HandleDOT(PCHAR Line) {
 	int Damage;
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
+	//WriteChatf("MobName: %s Damage: %i EntName: %s", MobName, Damage, EntName);
 	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -973,9 +995,12 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
       if (Color == 279) HandleOtherHitOther(Line);
       else if (Color == 265) HandleYouHitOther(Line);
       else if (Color == 278) HandleDeath(Line);
-      else if (Color == 283) HandleNonMelee(Line);
-      else if (Color == 264) HandleDOT(Line);
+      else if (Color == 283) HandleNonMelee(Line); //Your Non-melee
+      else if (Color == 376) HandleDOT(Line); //Your DoTs
+	  else if (Color == 377) HandleDOT(Line); //Others DoTs
+	  else if (Color == 379) HandleNonMelee(Line); //Others Non-melee
       else if (Color == 328) HandleOtherHitOther(Line); // Your Pet
+	  //else WriteChatf("%i: %s", Color, Line);
       //else if (Color == 13) Handle13(Line);
    }
    return 0;
