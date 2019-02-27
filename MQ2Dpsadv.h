@@ -1,8 +1,8 @@
 // DPS ADV CREATED BY WARNEN 2008-2009
 // MQ2DPSAdv.h
 
-char* OtherHits[] = {" punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", 0};
-char* YourHits[] = {" hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", 0};
+char* OtherHits[] = {" punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", 0};
+char* YourHits[] = {" hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", 0};
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
 enum { NOTOTAL, TOTALABOVE, TOTALSECOND, TOTALBOTTOM };
 

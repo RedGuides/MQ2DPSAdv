@@ -7,11 +7,27 @@ PreSetup("MQ2DPSAdv");
 #include <vector>
 #include "MQ2DPSAdv.h"
 
-#define DPSVERSION "1.2.03"
+#define DPSVERSION "1.2.06"
 //#define DPSDEV
 
 /*
  ### UPDATE THIS IF YOU MAKE A CHANGE ###
+ == 2/27/19 == 1.2.05 (Chatwiththisname)
+ Added various checks throughout to avoid crashes
+ Added Debug statements throughout while fixing crashes and left them for later reference if needed.
+ Added "/dpsadv debug" toggle to toggle on and off the debug while in game.
+ Added "Smashes" and "Smash" to the hits (Berserker pet did this, added to both as options just in case others can smash).
+
+ == 1/19/19 == 1.2.05 (Chatwiththisname)
+ Tried to categorize all Chat colors in comments
+ Added Thorn and Fire based DS's
+ Added Pet Non-Melee damage.
+
+ == 1/6/19 == 1.2.04 (Chatwiththisname)
+Added 2 new colors for Others DoTs and Others Non-Melee
+Changed the color of your DoTs
+Fixed DoTs and Non-Melee Damage for self and others
+Added "shoot" for YourHits and "shoots" for OtherHits to parse.
 
 == 7/18/09 == 1.2.03 (Warnen)
 * Added handling for Your Pet filter.
@@ -62,12 +78,6 @@ This update includes UI XML Changes. Make sure you replace the old UI File.
 
 == 2/03/09 == 1.1 (Warnen)
 * Release
-
-== 1/6/19 == 1.2 (Chatwiththisname)
-Added 2 new colors for Others DoTs and Others Non-Melee
-Changed the color of your DoTs
-Fixed DoTs and Non-Melee Damage for self and others
-Added "shoot" for YourHits and "shoots" for OtherHits to parse.
 
 */
 
@@ -683,10 +693,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 	int HitPos = 0, Action = 0;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else {
-		char *dmg = strpbrk(Line, "1234567890");
-		*Damage = atoi(dmg);
-	}
+	else
+		*Damage = atoi(strpbrk(Line, "1234567890"));
    while (OtherHits[Action]) {
       HitPos = (int)(strstr(Line, OtherHits[Action]) - Line);
       if (HitPos > 0)
@@ -696,9 +704,9 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
    if (HitPos <= 0){
       if (*Damage > 0 && !WarnedOHO) {
          WriteChatf("\ar[MQ2DPSAdv] Error: Can not use Other Hits Other: Numbers Only Hitmodes for DPS Parsing.");
-         if (Debug) WriteChatf("[Debug] Line: %s", Line);
+         if (Debug) WriteChatf("[Debug] OtherHitOther - Line: \ap%s", Line);
          WarnedOHO = true;
-      } //else if (Debug) WriteChatf("[Debug] Unparsed Line: %s", Line);
+      }
       return false;
    }
    strncpy_s(EntName, &Line[0], HitPos);
@@ -729,9 +737,9 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&M
          strcpy_s(MobName, CurTarMob->Name);
          if (!WarnedYHO) {
             WriteChatf("\ay[MQ2DPSAdv] Warning: You Hit Other: Numbers Only may result in inaccuracy due to non-targetted attacks.");
-            if (Debug) WriteChatf("[Debug] Line: %s", Line);
+			if (Debug) WriteChatf("[Debug] Line: %s", Line);
             WarnedYHO = true;
-         } //else if (Debug) WriteChatf("[Debug] Unparsed Line: %s", Line);
+         }
          return true;
       }
       return false;
@@ -745,34 +753,88 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&M
 }
 
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int *Damage) {
-   if (strstr(Line, "You were hit"))
-	   return false;
-   if (!strpbrk(Line, "1234567890"))
-	   return false;
-   else
-	   *Damage = atoi(strpbrk(Line, "1234567890"));
-   char temp[MAX_STRING] = "";
-   sprintf_s(temp, " for %i", *Damage);
-   int MobEnd = (int)(strstr(Line, temp) - Line);
-   //If this was a direct damage ability [EntName] hit [MobName] for [Damage] points of non-melee damage.
-   if (MobEnd > 0 && strstr(Line, ((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
-	   //WriteChatf("MobEnd: %i", MobEnd);
-	   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
-	   sprintf_s(temp, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
-	   strncpy_s(MobName, &Line[strlen(temp)+5], MobEnd - strlen(temp) - 5);
-       MobName[MobEnd] = 0;
-       return true;
+	if (strstr(Line, "You were hit"))
+		return false;
+	if (!strpbrk(Line, "1234567890"))
+		return false;
+
+	*Damage = atoi(strpbrk(Line, "1234567890"));
+
+	char temp[MAX_STRING] = "";
+	sprintf_s(temp, " for %i", *Damage);
+	int MobEnd = (int)(strstr(Line, temp) - Line);
+	//If this was a direct damage ability [EntName] hit [MobName] for [Damage] points of [DamageType] damage.
+	if (MobEnd <= 0) {
+		if (Debug) WriteChatf("NonMelee Failed, No MobEnd - Line: %s", Line);
+	}
+   if (MobEnd > 0) {
+	   if ((strstr(Line, ((PSPAWNINFO)pCharSpawn)->DisplayedName) || strstr(Line, "YOUR") || strstr(Line, " is "))) {
+		   sprintf_s(temp, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+		   if (strstr(Line, " YOUR ") || strstr(Line, " is ")) {
+			   //Process your damage shields.
+			   MobEnd = (int)(strstr(Line, " is ") - Line);
+			   sprintf_s(temp, " is ");
+			   strncpy_s(MobName, &Line[0], MobEnd);
+		   }
+		   else {
+			   //Normal Non-Melee
+			   strncpy_s(MobName, &Line[strlen(temp) + 5], MobEnd - strlen(temp) - 5);
+		   }
+		   if (strstr(Line, " is ") && !strstr(Line, " YOUR ")) {
+			   //Process other's Damage Shields.
+			   int EntEnd = 0;
+			   int EntStart = 0;
+			   if (strstr(Line, " pierced by ")) {
+				   //Thorns DS
+				   EntEnd = (int)(strstr(Line, "'s thorns for ") - Line);
+				   EntStart = (int)(strstr(Line, " pierced by ") - Line) + 12;
+				   strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+			   }
+			   else if (strstr(Line, " burned by ")) {
+				   //Fire DS
+				   EntEnd = (int)(strstr(Line, "'s flames for ") - Line);
+				   EntStart = (int)(strstr(Line, " burned by ") - Line) + 11;
+				   strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+			   }
+			   else if (strstr(Line, " tormented by ")) {
+				   //Frost DS
+				   EntEnd = (int)(strstr(Line, "'s frost for ") - Line);
+				   EntStart = (int)(strstr(Line, " tormented by ") - Line) + 14;
+				   strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+			   }
+			   if (EntEnd < 0 || EntStart < 0)
+				   return false;
+		   }
+		   else {
+			   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+		   }
+		   if (!strlen(MobName) || !strlen(EntName)) {
+			   if (Debug) WriteChatf("NonMelee Fail: %s", Line);
+			   return false;
+		   }
+			MobName[MobEnd] = 0;
+			if (Debug) WriteChatf("\ap%s\ax was hit by \ap%s \axfor \ap%i \axdamage", MobName, EntName, *Damage);
+		    return true;
+	   }
+	   sprintf_s(temp, " hit %s", MobName);
+	   int EntEnd = (int)(strstr(Line, temp) - Line);
+	   if (EntEnd <= 0) {
+		   if (Debug) WriteChatf("NonMelee Fail: %s",Line);
+		   return false;
+	   }
+	   strncpy_s(EntName, &Line[0], EntEnd);
+	   EntName[EntEnd] = 0;
+	   MobEnd = (int)(strstr(Line, " for ") - Line);
+	   int MobLength = MobEnd - 5 - strlen(EntName);
+	   strncpy_s(MobName, &Line[EntEnd + 5], MobLength);
+	   MobName[MobLength] = 0;
+	   if (!strlen(MobName) || !strlen(EntName)) {
+		   if (Debug) WriteChatf("NonMelee Fail: %s", Line);
+		   return false;
+	   }
+	   return true;
    }
-   sprintf_s(temp, " hit %s", MobName);
-   int EntEnd = (int)(strstr(Line, temp) - Line);
-   if (EntEnd <= 0) return false;
-   strncpy_s(EntName, &Line[0], EntEnd);
-   EntName[EntEnd] = 0;
-   MobEnd = (int)(strstr(Line, " for ") - Line);
-   int MobLength = MobEnd - 5 - strlen(EntName);
-   strncpy_s(MobName, &Line[EntEnd + 5], MobLength);
-   MobName[MobLength] = 0;
-   return true;
+   return false;
 }
 
 template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)[_MobSize])
@@ -784,6 +846,8 @@ template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)
       MobStart = 15;
       MobLength = strlen(Line) - 16;
    }
+   if (MobLength <= 0)
+	   return false;
    strncpy_s(MobName, &Line[MobStart], MobLength);
    MobName[MobLength] = 0;
    return true;
@@ -798,22 +862,18 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 	   return false;
    int MobEnd = (int)(strstr(Line, " has taken ") - Line);
 
-   if (strstr(Line, " damage from your "))
+   if (strstr(Line, " damage from your ")) {
 	   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
-   else {
+   } else {
 	  int EntEnd = (int)(strstr(Line, ".") - Line-6);
       if (MobEnd <= 0 || EntEnd <= 0) return false;
       int SpellNameStart = (int)(strstr(Line, " damage from ") - Line);
 	  int SpellNameEnd = (int)(strstr(Line, " by ") - Line);
 	  char temp[MAX_STRING] = "";
       strncpy_s(temp, &Line[SpellNameStart + 13], SpellNameEnd - SpellNameStart - 13);
-	  //WriteChatf("SpellNametemp: %s", temp);
 	  int EntStart = (int)(strstr(Line,temp) - Line + strlen(temp)+4);
-	  //WriteChatf("EntStart: %i EntEnd: %i", EntStart, EntEnd);
 	  strcpy_s(EntName, &Line[EntEnd, EntStart]);
-	  //WriteChatf("EntName: %s", EntName);
       EntName[EntEnd - EntStart+6] = 0;
-	  //WriteChatf("EntName: %s", EntName);
    }
    strncpy_s(MobName, &Line[0], MobEnd);
    int Corpse = (int)(strstr(MobName, "'s corpse") - MobName);
@@ -829,7 +889,7 @@ void HandleNonMelee(PCHAR Line) {
    int Damage;
    if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 	   return;
-   //WriteChatf("MobName: %s Damage: %i EntName: %s", MobName, Damage, EntName);
+   if (Debug) WriteChatf("[HandleNonMelee] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
    GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -838,7 +898,7 @@ void HandleDOT(PCHAR Line) {
 	int Damage;
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
-	//WriteChatf("MobName: %s Damage: %i EntName: %s", MobName, Damage, EntName);
+	if (Debug) WriteChatf("[HandleDot] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
 	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -847,6 +907,7 @@ void HandleOtherHitOther(PCHAR Line) {
    int Damage;
    if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
 	   return;
+   if (Debug) WriteChatf("[OtherHitOther] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
    if (DPSMob *mob = GetMob(MobName, true, true)) {
 	   if (DPSMob::DPSEntry *entry = mob->GetEntry(EntName)) {
 		   entry->AddDamage(Damage);
@@ -859,6 +920,7 @@ void HandleYouHitOther(PCHAR Line) {
 	int Damage;
 	if (!SplitStringYouHitOther(Line, MobName, &Damage))
 		return;
+	if (Debug) WriteChatf("[YouHitOther] You hit \ap%s for \ar%i damage!", MobName, Damage);
 	if (pCharSpawn) {
 		if (DPSMob *mob = GetMob(MobName, true, true)) {
 			if (DPSMob::DPSEntry *entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
@@ -871,6 +933,7 @@ void HandleYouHitOther(PCHAR Line) {
 void HandleDeath(PCHAR Line) {
 	char MobName[64] = { 0 };
    if (!SplitStringDeath(Line, MobName)) return;
+   if (Debug) WriteChatf("Handling Dead Mob: \ap%s", MobName);
    if(DPSMob *DeadMob = GetMob(MobName, false, true)) {
       HandleDeath(DeadMob);
 	  if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
@@ -906,7 +969,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
    char Arg1[MAX_STRING];
    GetArg(Arg1, szLine, 1);
    if (!_stricmp(Arg1, "show"))
-      if (!DPSWnd) WriteChatf("\arDPSWnd does not exist. Try reloading your UI.");
+      if (!DPSWnd) WriteChatf("\arDPSWnd does not exist. Try reloading your UI (/loadskin default).");
       else DPSWnd->dShow = 1;
    else if (!_stricmp(Arg1, "colors"))
       ((CXWnd*)pRaidOptionsWnd)->Show(1, 1);
@@ -924,13 +987,16 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
          DPSWnd->SaveLoc();
       } else WriteChatf("\arFailed to Copy: DPS Window not loaded.");
    }
+   else if (!_stricmp(Arg1, "Debug")) {
+	   Debug = Debug ? false : true;
+	   WriteChatf("Debug is now: %s", Debug ? "\agOn" : "\arOff");
+   }
    CheckActive();
 }
 
 void CreateDPSWindow() {
    if (DPSWnd) DestroyDPSWindow();
    if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
-      //WriteChatf("\agCreating Window...");
       DPSWnd = new CDPSAdvWnd();
       if (DPSWnd->dShow) ((CXWnd*)DPSWnd)->Show(1,1);
       char szTitle[MAX_STRING];
@@ -989,21 +1055,176 @@ PLUGIN_API VOID ShutdownPlugin(VOID) {
 
 
 PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
-   if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
-   if (Active) {
-      //WriteChatf("%i: %s", Color, Line);
-      if (Color == 279) HandleOtherHitOther(Line);
-      else if (Color == 265) HandleYouHitOther(Line);
-      else if (Color == 278) HandleDeath(Line);
-      else if (Color == 283) HandleNonMelee(Line); //Your Non-melee
-      else if (Color == 376) HandleDOT(Line); //Your DoTs
-	  else if (Color == 377) HandleDOT(Line); //Others DoTs
-	  else if (Color == 379) HandleNonMelee(Line); //Others Non-melee
-      else if (Color == 328) HandleOtherHitOther(Line); // Your Pet
-	  //else WriteChatf("%i: %s", Color, Line);
-      //else if (Color == 13) Handle13(Line);
-   }
-   return 0;
+	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
+	if (Active) {
+		//WriteChatf("%i: %s", Color, Line);
+		switch (Color) {
+			case 0://Color: 0 - Task Updates
+
+			case 2: //Color: 2 - Consider Message - Green
+
+			case 4: //Color: 4 - Consider messages - Dark Blue
+
+			case 6://Color: 6 - Consider message - Grey
+
+			case 10://Color: 10 - Merchant says "Hello there, Soandso. How about a nice Iron Ration?"
+
+			case 13://Color: 13 - Attack is on/off - Other invites to raid.
+
+			case 15://Color: 15 - Help messages, Consider Message - Yellow (right click on the NPC to consider it, Targeted (NPC): a slatescale serpent, You have gained an ability point)
+
+			case 18://Color: 18 - Consider message - Light blue
+
+			case 20://Color: 20 - You regain some experience from resurrection.
+
+			case 256://Color: 256 - Other player /say messages	
+			case 257://Color: 257 - Other /tell's you
+			case 258://Color: 258 - Other tells /group
+			case 259://Color: 259 - Guild Chat - Incoming
+			case 260://Color: 260 - Other /ooc
+			case 261://Color: 261 - Other /auction
+			case 262://Color: 262 - Other /shout	
+			case 263://Color: 263 - other Emote commands/eat food messages (/cry, Chomp, chomp, chomp... Soandso takes a bite...etc)
+			case 264://Color: 264 - You begin casting
+				break;
+			case 265://Color: 265 - You hit other (melee/melee crit)
+				HandleYouHitOther(Line);
+				break;
+			case 266://Color: 266 - Other hits you	
+			case 267://Color: 267 - You miss other	
+			case 268://Color: 268 - Riposte/Dodge/Other Misses You
+			case 269://Color: 269 - Announcement (GM Events etc)
+			case 270://Color: 270 - You have become better at [Skill]! (Number)
+			case 271://Color: 271 - Song wear off message?? (Ritual Scarification wear off message)
+			case 272://Color: 272 - Pet thanks for stuff you give them?
+			case 273://Color: 273 - Charged mercenary upkeep/Group Invites/Joins/Banker tells you welcome to bank.
+			case 274://Color: 274 - Faction hits
+			case 275://Color: 275 - [Merchant] tells you, that'll be [price] for the [item]
+			case 276://Color: 276 - You sold [QTY] [Item Name] to [Player] for [Amount]/You Purchased [Item Name] from [NPC] for [Amount]
+			case 277://Color: 277 - Your death message.
+			case 278://Color: 278 - Other PC death message.
+				break;
+			case 279://Color: 279 - Others Hits Other
+				HandleOtherHitOther(Line); //Other hits other
+				break;
+			case 280://Color: 280 - Other Misses Other	
+			case 281://Color: 281 - /who
+			case 282://Color: 282 - Other /yell
+				break;
+			case 283://Color: 283 - Your Non-Melee spell dmg.
+				HandleNonMelee(Line); //Your Non-melee
+				break;
+			case 284://Color: 284 - Spell wear off messages
+			case 285://Color: 285 - Coin collection/Split
+			case 286://Color: 286 - Loot Related (Master looter actions, you loot)	
+			case 287://Color: 287 - Dice Rolls	
+			case 288://Color: 288 - Other Starts Casting Messages	
+			case 289://Color: 289 - Target is out of range, get closer
+			case 290://Color: 290 - Channel Lists after logged in
+			case 291://Color: 291 - Chat Channel 1 - Incoming
+			case 292://Color: 292 - Chat Channel 2 - Incoming
+			case 293://Color: 293 - Chat Channel 3 - Incoming
+			case 294://Color: 294 - Chat Channel 4 - Incoming
+			case 295://Color: 295 - Chat Channel 5 - Incoming
+			case 296://Color: 296 - Chat Channel 6 - Incoming
+			case 297://Color: 297 - Chat Channel 7 - Incoming
+			case 298://Color: 298 - Chat Channel 8 - Incoming
+			case 299://Color: 299 - Chat Channel 9 - Incoming
+			case 300://Color: 300 - Chat Channel 10 - Incoming
+
+			case 303://Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
+
+			case 306://Color: 306 - Enrage (Showed for pet)
+			case 307://Color: 307 - Your /say messages, mob advances messages.	
+			case 308://Color: 308 - You tell other.	
+			case 309://Color: 309 - Group conversation
+			case 310://Color: 310 - Guild conversation - Outgoing
+			case 311://Color: 311 - you /ooc
+			case 312://Color: 312 - you /auction
+			case 313://Color: 313 - you shout.
+			case 314://Color: 314 - /emote messages
+			case 315://Color: 315 - Chat Channel 1 - Outgoing
+			case 316://Color: 316 - Chat Channel 2 - Outgoing
+			case 317://Color: 317 - Chat Channel 3 - Outgoing
+			case 318://Color: 318 - Chat Channel 4 - Outgoing
+			case 319://Color: 319 - Chat Channel 5 - Outgoing
+			case 320://Color: 320 - Chat Channel 6 - Outgoing
+			case 321://Color: 321 - Chat Channel 7 - Outgoing
+			case 322://Color: 322 - Chat Channel 8 - Outgoing
+			case 323://Color: 323 - Chat Channel 9 - Outgoing
+			case 324://Color: 324 - Chat Channel 10 - Outgoing
+
+			case 327://Color: 327 - Any /rsay
+				break;
+			case 328://Color: 328 - your pet misses
+				HandleOtherHitOther(Line); // Your Pet
+				break;
+			case 329://Color: 329 - Damage Shield hits you.
+			case 330://Color: 330 - Raid Role messages.
+
+			case 333://Color: 333 - Item Focus messages	
+			case 334://Color: 334 - You gain Experience messages
+			case 335://Color: 335 - You have already finished collecting [Item].
+				break;
+			case 336://Color: 336 - Pet Non-Melee/Pet beings to cast
+				HandleNonMelee(Line); //All pet non-melee (yours and others)
+				break;
+			case 337://Color: 337 - Pet messages (YourPet says, "Following you master.")
+
+			case 339://Color: 339 - Strike thru (yours and others)	
+			case 340://Color: 340 - You are stunned/unstunned messages.
+
+			case 342://Color: 342 - fellowship messages	
+			case 343://Color: 343 - corpse emote
+
+			case 345://Color: 345 - Guild plants banner
+			case 346://Color: 346 - Mercenary tells group
+
+			case 348://Color: 348 - Achievement - you and other.
+			case 349://Color: 349 - Achievement - Guildmate
+				break;
+			case 358://Color: 358 - NPC Death message
+				HandleDeath(Line); //NPC died is Color: 358 Your death is Color: 277(this was 278)
+				break;
+			case 360://Color: 360 - Other Rolls Dice.
+			case 361://Color: 361 - Injured by falling (self)
+			case 362://Color: 362 - Injured by falling (other)
+				break;
+			case 363://Color: 363 - Your damage shield
+				//HandleNonMelee(Line); //Your Damage shield
+			case 364://Color: 364 - Other's damage shield
+				HandleNonMelee(Line); //Other's damage shield
+				break;
+			case 366://Color: 366 - Your [Spell Name] has been overwritten - Detrimental
+			case 367://Color: 367 - Your [Spell Name] has been overwritten - Beneficial
+			case 368://Color: 368 - You cannot use that command right now (clicking disc too fast)
+			case 369://Color: 369 - You can use [Ability Name] again in [Time till you can use it again]
+			case 370://Color: 370 - AA Reuse Timer failed
+			case 371://Color: 371 - Destroy item message
+
+			case 373://Color: 373 - Heal over time on other?
+			case 374://Color: 374 - You heal other	
+			case 375://Color: 375 - Other buffs other/Other Heal Other
+				break;
+			case 376://Color: 376 - Your DoT's
+				//HandleDOT(Line); //Your DoTs
+			case 377://Color: 377 - Other's DoT's
+				HandleDOT(Line); //Your DoTs
+				break;
+			case 378://Color: 378 - Song messages - Soandso begins to sing a song. <Selo's Sonata I>
+				break;
+			case 379://Color: 379 - Others Non-Melee
+				HandleNonMelee(Line); //Others Non-melee
+				break;
+			case 380://Color: 380 - Your spell messages
+				break;
+			default:
+				//Don't Know these, lets see what it is. 
+				if (Debug) WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, Line);
+				break;
+		}
+	}
+	return 0;
 }
 
 bool CheckInterval() {
