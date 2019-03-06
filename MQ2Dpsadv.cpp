@@ -813,7 +813,6 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 			   return false;
 		   }
 			MobName[MobEnd] = 0;
-			if (Debug) WriteChatf("\ap%s\ax was hit by \ap%s \axfor \ap%i \axdamage", MobName, EntName, *Damage);
 		    return true;
 	   }
 	   sprintf_s(temp, " hit %s", MobName);
@@ -865,7 +864,14 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
    if (strstr(Line, " damage from your ")) {
 	   strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
    } else {
-	  int EntEnd = (int)(strstr(Line, ".") - Line-6);
+	   int EntEnd = 0;
+	   if (!strstr(Line, "Rk. I")) {
+		   EntEnd = (int)(strstr(Line, ".") - Line - 6);
+	   }
+	   else {
+		   EntEnd = (int)(strrchr(Line, '.') - Line - 6);
+		   //int EntEnd = Line.rfind('.');
+	   }
       if (MobEnd <= 0 || EntEnd <= 0) return false;
       int SpellNameStart = (int)(strstr(Line, " damage from ") - Line);
 	  int SpellNameEnd = (int)(strstr(Line, " by ") - Line);
@@ -889,7 +895,7 @@ void HandleNonMelee(PCHAR Line) {
    int Damage;
    if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 	   return;
-   if (Debug) WriteChatf("[HandleNonMelee] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
+   if (Debug) WriteChatf("[HandleNonMelee] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
    GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -898,7 +904,7 @@ void HandleDOT(PCHAR Line) {
 	int Damage;
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
-	if (Debug) WriteChatf("[HandleDot] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
+	if (Debug) WriteChatf("[HandleDot] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
@@ -907,7 +913,7 @@ void HandleOtherHitOther(PCHAR Line) {
    int Damage;
    if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
 	   return;
-   if (Debug) WriteChatf("[OtherHitOther] \ap%s hit \ap%s for \ar%i", EntName, MobName, Damage);
+   if (Debug) WriteChatf("[OtherHitOther] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
    if (DPSMob *mob = GetMob(MobName, true, true)) {
 	   if (DPSMob::DPSEntry *entry = mob->GetEntry(EntName)) {
 		   entry->AddDamage(Damage);
@@ -920,7 +926,7 @@ void HandleYouHitOther(PCHAR Line) {
 	int Damage;
 	if (!SplitStringYouHitOther(Line, MobName, &Damage))
 		return;
-	if (Debug) WriteChatf("[YouHitOther] You hit \ap%s for \ar%i damage!", MobName, Damage);
+	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
 	if (pCharSpawn) {
 		if (DPSMob *mob = GetMob(MobName, true, true)) {
 			if (DPSMob::DPSEntry *entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
@@ -933,7 +939,7 @@ void HandleYouHitOther(PCHAR Line) {
 void HandleDeath(PCHAR Line) {
 	char MobName[64] = { 0 };
    if (!SplitStringDeath(Line, MobName)) return;
-   if (Debug) WriteChatf("Handling Dead Mob: \ap%s", MobName);
+   if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
    if(DPSMob *DeadMob = GetMob(MobName, false, true)) {
       HandleDeath(DeadMob);
 	  if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
