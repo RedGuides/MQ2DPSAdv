@@ -168,7 +168,7 @@ public:
    CTextEntryWnd *TFightTO;
    CTextEntryWnd *TEntTO;
    CComboWnd *CShowTotal;
-   CListWnd *LFightList;
+//   CListWnd *LFightList;
    bool ReSort;
 
    CDPSAdvWnd();
