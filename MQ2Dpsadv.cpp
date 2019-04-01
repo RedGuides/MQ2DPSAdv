@@ -262,22 +262,25 @@ void DPSMob::AddDamage(int aDamage) {
 }
 
 DPSMob::DPSEntry *DPSMob::GetEntry(char EntName[64], bool Create) {
-   if (LastEntry && !strcmp(LastEntry->Name, EntName)) return LastEntry;
-   else {
-      if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
-      for (int i = 0; i < (int)EntList.size(); i++) {
-         if (!strcmp(EntList[i]->Name, EntName)) {
-            LastEntry = EntList[i];
-            return LastEntry;
-         }
-      }
-   }
-   if (Create) {
-      LastEntry = new DPSEntry(EntName, this);
-      EntList.push_back(LastEntry);
-      return LastEntry;
-   }
-   return 0;
+	if (gAnonymize) {
+		Anonymize(EntName);
+	}
+	if (LastEntry && !strcmp(LastEntry->Name, EntName)) return LastEntry;
+	else {
+		if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
+		for (int i = 0; i < (int)EntList.size(); i++) {
+			if (!strcmp(EntList[i]->Name, EntName)) {
+			LastEntry = EntList[i];
+			return LastEntry;
+			}
+		}
+	}
+	if (Create) {
+		LastEntry = new DPSEntry(EntName, this);
+		EntList.push_back(LastEntry);
+		return LastEntry;
+	}
+	return 0;
 }
 
 // ############################### CDPSAdvWnd START ############################################
@@ -1349,4 +1352,35 @@ PLUGIN_API VOID OnEndZone(VOID) {
    //DebugSpewAlways("END ZONING");
    Zoning = false;
    CheckActive();
-} 
+}
+
+bool Anonymize(char *name)
+{
+	if (GetGameState() != GAMESTATE_INGAME || !pLocalPlayer)
+		return 0;
+	BOOL bisTarget = false;
+	BOOL isRmember = false;
+	BOOL isGmember = false;
+	bool bChange = false;
+	int ItsMe = _stricmp(((PSPAWNINFO)pLocalPlayer)->Name, name);
+	if (ItsMe != 0)//well if it is me, then there is no point in checking if its a group member
+		isGmember = IsGroupMember(name);
+	if (!isGmember && ItsMe != 0)//well if it is me or a groupmember, then there is no point in checking if its a raid member
+		isRmember = IsRaidMember(name);
+	if (ItsMe != 0 && !isGmember && !isRmember) {
+		//my target?
+		if (pTarget && ((PSPAWNINFO)pTarget)->Type != SPAWN_NPC) {
+			if (!_stricmp(((PSPAWNINFO)pTarget)->Name, name)) {
+				bisTarget = true;
+			}
+		}
+	}
+	if (ItsMe == 0 || isGmember || isRmember || bisTarget) {
+		int len = strlen(name);
+		bChange = true;
+		for (int i = 1; i < len - 1; i++) {
+			name[i] = '*';
+		}
+	}
+	return bChange;
+}

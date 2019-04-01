@@ -76,6 +76,7 @@ PLUGIN_API VOID InitializePlugin(VOID);
 PLUGIN_API VOID ShutdownPlugin(VOID);
 PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color);
 PLUGIN_API VOID OnPulse(VOID);
+bool Anonymize(char *name);
 void         DestroyDPSWindow();
 void         CreateDPSWindow();
 void         CreateDPSWindow();
@@ -167,7 +168,7 @@ public:
    CTextEntryWnd *TFightTO;
    CTextEntryWnd *TEntTO;
    CComboWnd *CShowTotal;
-//   CListWnd *LFightList;
+   CListWnd *LFightList;
    bool ReSort;
 
    CDPSAdvWnd();
