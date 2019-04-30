@@ -262,6 +262,9 @@ void DPSMob::AddDamage(int aDamage) {
 }
 
 DPSMob::DPSEntry *DPSMob::GetEntry(char EntName[64], bool Create) {
+    if (!_stricmp(EntName, "You")) {
+		strcpy_s(EntName, 64, ((PSPAWNINFO)pLocalPlayer)->Name);
+	}
 	if (gAnonymize) {
 		Anonymize(EntName);
 	}
