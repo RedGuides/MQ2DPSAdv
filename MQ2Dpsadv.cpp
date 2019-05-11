@@ -266,7 +266,7 @@ DPSMob::DPSEntry *DPSMob::GetEntry(char EntName[64], bool Create) {
 		strcpy_s(EntName, 64, ((PSPAWNINFO)pLocalPlayer)->Name);
 	}
 	if (gAnonymize) {
-		Anonymize(EntName);
+		Anonymize(EntName,64);
 	}
 	if (LastEntry && !strcmp(LastEntry->Name, EntName)) return LastEntry;
 	else {
@@ -385,17 +385,17 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
    int i = 0, LineNum = 0, RankAdj = 0, ShowMeLineNum = 0;
    bool FoundMe = false, ThisMe = false;
    if (ShowTotal == TOTALABOVE) {
-      LineNum = LTopList->AddString(&CXStr(""), 0, 0, 0);
+      LineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
       SetTotal(LineNum, CurListMob);
       RankAdj++;
    }
    if (ShowMeTop) {
-      ShowMeLineNum = LTopList->AddString(&CXStr(""), 0, 0, 0);
+      ShowMeLineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
       SetLineColors(ShowMeLineNum, 0, false, true);
       RankAdj++;
    }
    if (ShowTotal == TOTALSECOND) {
-      LineNum = LTopList->AddString(&CXStr(""), 0, 0, 0);
+      LineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
       SetTotal(LineNum, CurListMob);
       RankAdj++;
    }
@@ -406,7 +406,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
          if (!ShowMeMin || (LineNum - RankAdj + 1) > ShowMeMinNum) FoundMe = true;
          ThisMe = true;
       } else ThisMe = false;
-      LineNum = LTopList->AddString(&CXStr(""), 0, 0, 0);
+      LineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
       SetLineColors(LineNum, Ent);
       sprintf_s(szTemp, "%i", LineNum - RankAdj + 1);
       LTopList->SetItemText(LineNum, 0, &CXStr(szTemp));
@@ -422,7 +422,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
       if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, &CXStr(szTemp));
    }
    if (ShowTotal == TOTALBOTTOM) {
-      LineNum = LTopList->AddString(&CXStr(""), 0, 0, 0);
+      LineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
       SetTotal(LineNum, CurListMob);
    }
    if (ShowMeTop && !FoundMe) LTopList->RemoveLine(ShowMeLineNum);
@@ -1358,6 +1358,7 @@ PLUGIN_API VOID OnEndZone(VOID) {
    CheckActive();
 }
 
+/*this exist in MQ2Utilities, no need to call it here
 bool Anonymize(char *name)
 {
 	if (GetGameState() != GAMESTATE_INGAME || !pLocalPlayer)
@@ -1388,3 +1389,4 @@ bool Anonymize(char *name)
 	}
 	return bChange;
 }
+*/
