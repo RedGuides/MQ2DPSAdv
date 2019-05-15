@@ -87,7 +87,7 @@ DPSMob::DPSEntry::DPSEntry() {
    Init();
 }
 
-DPSMob::DPSEntry::DPSEntry(char EntName[64], DPSMob *pParent) {
+DPSMob::DPSEntry::DPSEntry(CHAR EntName[256], DPSMob *pParent) {
    Init();
    Parent = pParent;
    strcpy_s(Name, EntName);
@@ -261,12 +261,12 @@ void DPSMob::AddDamage(int aDamage) {
    }
 }
 
-DPSMob::DPSEntry *DPSMob::GetEntry(char EntName[64], bool Create) {
+DPSMob::DPSEntry *DPSMob::GetEntry(char EntName[256], bool Create) {
     if (!_stricmp(EntName, "You")) {
-		strcpy_s(EntName, 64, ((PSPAWNINFO)pLocalPlayer)->Name);
+		strcpy_s(EntName, 256, ((PSPAWNINFO)pLocalPlayer)->Name);
 	}
 	if (gAnonymize) {
-		Anonymize(EntName,64);
+		Anonymize(EntName,256,2);
 	}
 	if (LastEntry && !strcmp(LastEntry->Name, EntName)) return LastEntry;
 	else {
@@ -534,9 +534,9 @@ void CDPSAdvWnd::LoadSettings() {
    CShowTotal->SetChoice(ShowTotal);
 }
 
-void CDPSAdvWnd::LoadLoc(char szChar[64]) {
+void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	if (!GetCharInfo()) return;
-	char szName[64];
+	char szName[256] = { 0 };
 	if (!szChar) strcpy_s(szName, GetCharInfo()->Name);
 	else strcpy_s(szName, szChar);
 	Saved = (GetPrivateProfileInt(szName, "Saved", 0, INIFileName) > 0 ? true : false);
@@ -898,7 +898,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 }
 
 void HandleNonMelee(PCHAR Line) {
-	char EntName[64] = { 0 }, MobName[64] = { 0 };
+	CHAR EntName[256] = { 0 };
+	CHAR MobName[256] = { 0 };
    int Damage;
    if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 	   return;
@@ -907,7 +908,8 @@ void HandleNonMelee(PCHAR Line) {
 }
 
 void HandleDOT(PCHAR Line) {
-	char EntName[64] = { 0 }, MobName[64] = { 0 };
+	CHAR EntName[256] = { 0 };
+	CHAR MobName[256] = { 0 };
 	int Damage;
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
@@ -916,7 +918,7 @@ void HandleDOT(PCHAR Line) {
 }
 
 void HandleOtherHitOther(PCHAR Line) {
-	char EntName[64] = { 0 }, MobName[64] = {0};
+	char EntName[256] = { 0 }, MobName[256] = {0};
    int Damage;
    if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
 	   return;
@@ -929,7 +931,7 @@ void HandleOtherHitOther(PCHAR Line) {
 }
 
 void HandleYouHitOther(PCHAR Line) {
-	char MobName[64] = { 0 };
+	char MobName[256] = { 0 };
 	int Damage;
 	if (!SplitStringYouHitOther(Line, MobName, &Damage))
 		return;
@@ -944,7 +946,7 @@ void HandleYouHitOther(PCHAR Line) {
 }
 
 void HandleDeath(PCHAR Line) {
-	char MobName[64] = { 0 };
+	char MobName[256] = { 0 };
    if (!SplitStringDeath(Line, MobName)) return;
    if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
    if(DPSMob *DeadMob = GetMob(MobName, false, true)) {
