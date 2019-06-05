@@ -819,8 +819,13 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 			   if (Debug) WriteChatf("NonMelee Fail: %s", Line);
 			   return false;
 		   }
-			MobName[MobEnd] = 0;
-		    return true;
+			if (MobEnd > 0 && MobEnd < 256) {
+			   MobName[MobEnd] = 0;
+			   return true;
+		   }
+		   else {
+			   return false;
+		   }
 	   }
 	   sprintf_s(temp, " hit %s", MobName);
 	   int EntEnd = (int)(strstr(Line, temp) - Line);
