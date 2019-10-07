@@ -374,6 +374,8 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob *Mob) {
    LTopList->SetItemText(LineNum, 2, &CXStr(szTemp));
    sprintf_s(szTemp, "%i", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
    LTopList->SetItemText(LineNum, 3, &CXStr(szTemp));
+   sprintf_s(szTemp, "%I64is", CurListMob->Damage.Last - CurListMob->Damage.First);
+   LTopList->SetItemText(LineNum, 4, &CXStr(szTemp));
 }
 
 void CDPSAdvWnd::DrawList(bool DoDead) {
@@ -420,6 +422,10 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
       sprintf_s(szTemp, "%i", Ent->GetDPS());
       LTopList->SetItemText(LineNum, 3, &CXStr(szTemp));
       if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, &CXStr(szTemp));
+	  sprintf_s(szTemp, "%I64is", Ent->Damage.Last - Ent->Damage.First);
+	  LTopList->SetItemText(LineNum, 4, &CXStr(szTemp));
+	  if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 4, &CXStr(szTemp));
+	  
    }
    if (ShowTotal == TOTALBOTTOM) {
       LineNum = LTopList->AddString(CXStr(""), 0, 0, 0);
@@ -437,27 +443,32 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry *Ent, bool Total, b
       LTopList->SetItemColor(LineNum, 1, MeTopColor);
       LTopList->SetItemColor(LineNum, 2, MeTopColor);
       LTopList->SetItemColor(LineNum, 3, MeTopColor);
+	  LTopList->SetItemColor(LineNum, 4, MeTopColor);
    } else if (Total) {
       LTopList->SetItemColor(LineNum, 0, TotalColor);
       LTopList->SetItemColor(LineNum, 1, TotalColor);
       LTopList->SetItemColor(LineNum, 2, TotalColor);
       LTopList->SetItemColor(LineNum, 3, TotalColor);
+	  LTopList->SetItemColor(LineNum, 4, TotalColor);
    } else if (!strcmp(Ent->Name, ((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
       LTopList->SetItemColor(LineNum, 0, MeColor);
       LTopList->SetItemColor(LineNum, 1, MeColor);
       LTopList->SetItemColor(LineNum, 2, MeColor);
       LTopList->SetItemColor(LineNum, 3, MeColor);
+	  LTopList->SetItemColor(LineNum, 4, MeColor);
    } else if (UseRaidColors && Ent->Class && (Ent->SpawnType == SPAWN_PLAYER || Ent->Mercenary)) {
       //WriteChatf("Setting Raid Color: %i, %i, %i", Ent->Class, Coloring[Ent->Class], ((PEQRAIDWINDOW)pRaidWnd)->ClassColors[ClassInfo.RaidColorOrder[Ent->Class]]);
       LTopList->SetItemColor(LineNum, 0, NormalColor);
       LTopList->SetItemColor(LineNum, 1, ((PEQRAIDWINDOW)pRaidWnd)->ClassColors[ClassInfo[Ent->Class].RaidColorOrder]);
       LTopList->SetItemColor(LineNum, 2, NormalColor);
       LTopList->SetItemColor(LineNum, 3, NormalColor);
+	  LTopList->SetItemColor(LineNum, 4, NormalColor);
    } else {
       LTopList->SetItemColor(LineNum, 0, NormalColor);
       LTopList->SetItemColor(LineNum, 1, NPCColor);
       LTopList->SetItemColor(LineNum, 2, NormalColor);
       LTopList->SetItemColor(LineNum, 3, NormalColor);
+	  LTopList->SetItemColor(LineNum, 4, NormalColor);
    }
 }
 /*
