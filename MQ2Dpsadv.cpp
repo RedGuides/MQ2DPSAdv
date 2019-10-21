@@ -432,7 +432,7 @@ void MakeItTBMK(PCHAR szLine) {
 		std::string temp = szLine;
 		temp.insert(temp.end() - 1, '.');
 		sprintf_s(szLine, MAX_STRING, temp.c_str());
-		strcat_s(szLine, MAX_STRING, " tril");
+		strcat_s(szLine, MAX_STRING, " t");
 	}
 	else if (value >= 1000000000) {
 		value = value / 100000000;
@@ -440,7 +440,7 @@ void MakeItTBMK(PCHAR szLine) {
 		std::string temp = szLine;
 		temp.insert(temp.end() - 1, '.');
 		sprintf_s(szLine, MAX_STRING, temp.c_str());
-		strcat_s(szLine, MAX_STRING, " bil");
+		strcat_s(szLine, MAX_STRING, " b");
 	}
 	else if (value >= 1000000) {
 		value = value / 100000;
@@ -448,7 +448,7 @@ void MakeItTBMK(PCHAR szLine) {
 		std::string temp = szLine;
 		temp.insert(temp.end() - 1, '.');
 		sprintf_s(szLine, MAX_STRING, temp.c_str());
-		strcat_s(szLine, MAX_STRING, " mil");
+		strcat_s(szLine, MAX_STRING, " m");
 	}
 	else if (value >= 1000) {
 		value = value / 100;
