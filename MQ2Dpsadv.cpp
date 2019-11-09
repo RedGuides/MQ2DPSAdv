@@ -312,10 +312,10 @@ DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[256], bool Create) {
 
 CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	int CheckUI = false;
+	//Tabs holder exists?
 	if (!(Tabs = (CTabWnd*)GetChildItem("DPS_Tabs"))) CheckUI = true;
-	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
-	if (!CheckUI) LTopList->bColumnSizable = true;
-	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
+	
+	//DPS Settings Tab
 	if (!(CShowMeTop = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeTopBox"))) CheckUI = true;
 	if (!(CShowMeMin = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeMinBox"))) CheckUI = true;
 	if (!(TShowMeMin = (CTextEntryWnd*)GetChildItem("DPS_ShowMeMinInput"))) CheckUI = true;
@@ -326,13 +326,26 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (!(TFightTO = (CTextEntryWnd*)GetChildItem("DPS_FightTOInput"))) CheckUI = true;
 	if (!(TEntTO = (CTextEntryWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
 	if (!(CShowTotal = (CComboWnd*)GetChildItem("DPS_ShowTotal"))) CheckUI = true;
+	//End DPS Settings Tab
+
+	//DPS Tab
+	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
+	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
+	
+	
+	
+	
+	
+	
 	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
 
 	if (CheckUI) {
 		WriteChatf("\ar[MQ2DPSAdv] Incorrect UI File in use. Please update to latest and reload plugin.");
 		WrongUI = true;
+		return;
 	}
-	else WrongUI = false;
+	else
+		WrongUI = false;
 
 	LoadLoc();
 	SetWndNotification(CDPSAdvWnd);
@@ -643,19 +656,25 @@ void CDPSAdvWnd::SaveLoc() {
 
 void CDPSAdvWnd::LoadSettings() {
 	CHAR szTemp[MAX_STRING] = { 0 };
+
+	//Set the check boxes to their current settings.
 	CShowMeTop->Checked = ShowMeTop ? 1 : 0;
 	CShowMeMin->Checked = ShowMeMin ? 1 : 0;
-	sprintf_s(szTemp, "%i", ShowMeMinNum);
-	SetCXStr(&TShowMeMin->InputText, szTemp);
 	CUseRaidColors->Checked = UseRaidColors ? 1 : 0;
 	CLiveUpdate->Checked = LiveUpdate ? 1 : 0;
 	CUseTBMKOutput->Checked = UseTBMKOutputs ? 1 : 0;
+
+	//Set the text in the Inputboxes to their current setting.
+	sprintf_s(szTemp, "%i", ShowMeMinNum);
+	SetCXStr(&TShowMeMin->InputText, szTemp);
 	sprintf_s(szTemp, "%i", FightIA);
 	SetCXStr(&TFightIA->InputText, szTemp);
 	sprintf_s(szTemp, "%i", FightTO);
 	SetCXStr(&TFightTO->InputText, szTemp);
 	sprintf_s(szTemp, "%i", EntTO);
 	SetCXStr(&TEntTO->InputText, szTemp);
+
+	//Clear and populate the ComboBox options for Show Total
 	CShowTotal->DeleteAll();
 	CShowTotal->InsertChoice("Don't Show Total");
 	CShowTotal->InsertChoice("Above ShowMeTop");
@@ -663,10 +682,14 @@ void CDPSAdvWnd::LoadSettings() {
 	CShowTotal->InsertChoice("Show Bottom");
 	CShowTotal->InsertChoice("");
 	CShowTotal->SetChoice(ShowTotal);
+	//Make Columns resizable.
+	LTopList->bColumnSizable = true;
 }
 
 void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	if (!GetCharInfo()) return;
+	if (WrongUI)
+		return;
 	char szName[256] = { 0 };
 	if (!szChar) strcpy_s(szName, GetCharInfo()->Name);
 	else strcpy_s(szName, szChar);
@@ -1122,25 +1145,32 @@ void DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine) {
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	char Arg1[MAX_STRING];
 	GetArg(Arg1, szLine, 1);
-	if (!_stricmp(Arg1, "show"))
-		if (!DPSWnd) WriteChatf("\arDPSWnd does not exist. Try reloading your UI (/loadskin default).");
-		else DPSWnd->SetVisible(1);
-	else if (!_stricmp(Arg1, "colors"))
+	if (!_stricmp(Arg1, "show")) {
+		if (!DPSWnd || WrongUI) {
+			if (!DPSWnd) WriteChatf("\arDPSWnd does not exist. Try reloading your UI (/loadskin default).");
+			if (WrongUI) WriteChatf("\arIncorrect UI File in use. Make sure you don't have a copy of MQUI_DPSAdvWnd stored in the EQ\\uifiles\\Default or in your custom UI Folder.");
+		}
+		else {
+			DPSWnd->SetVisible(1);
+		}
+	}
+	else if (!_stricmp(Arg1, "colors") && !WrongUI)
 		((CXWnd*)pRaidOptionsWnd)->Show(1, 1);
-	else if (DPSWnd && !_stricmp(Arg1, "reload"))
+	else if (DPSWnd && !_stricmp(Arg1, "reload") && !WrongUI)
 		DPSWnd->LoadLoc();
-	else if (DPSWnd && !_stricmp(Arg1, "save"))
+	else if (DPSWnd && !_stricmp(Arg1, "save") && !WrongUI)
 		DPSWnd->SaveLoc();
-	else if (!_stricmp(Arg1, "listsize"))
+	else if (!_stricmp(Arg1, "listsize") && !WrongUI)
 		WriteChatf("\ayMobList Size: %i", MobList.size());
-	else if (!_stricmp(Arg1, "copy")) {
+	else if (!_stricmp(Arg1, "copy") && !WrongUI) {
 		char szCopy[MAX_STRING];
 		GetArg(szCopy, szLine, 2);
 		if (DPSWnd) {
 			DPSWnd->LoadLoc(szCopy);
 			DPSWnd->SaveLoc();
 		}
-		else WriteChatf("\arFailed to Copy: DPS Window not loaded.");
+		else 
+			WriteChatf("\arFailed to Copy: DPS Window not loaded.");
 	}
 	else if (!_stricmp(Arg1, "Debug")) {
 		Debug = Debug ? false : true;
@@ -1449,7 +1479,7 @@ void IntPulse() {
 PLUGIN_API VOID OnPulse(VOID) {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
 
-	if (Active) {
+	if (Active && !WrongUI) {
 		if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();
 		if ((PSPAWNINFO)pTarget && (PSPAWNINFO)pTarget != CurTarget) TargetSwitch();
 		if (CListType == CLISTTARGET && CurTarMob && CurTarMob != CurListMob && CurTarMob->Active && CurTarMob->SpawnType == 1) ListSwitch(CurTarMob);
