@@ -842,7 +842,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 			break;
 		Action++;
 	}
-	if (HitPos <= 0) {
+	if (HitPos <= 0 || HitPos > 2048) {
 		if (*Damage > 0 && !WarnedOHO) {
 			WriteChatf("\ar[MQ2DPSAdv] Error: Can not use Other Hits Other: Numbers Only Hitmodes for DPS Parsing.");
 			if (Debug) WriteChatf("[Debug] OtherHitOther - Line: \ap%s", Line);
@@ -873,7 +873,7 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&M
 		if (HitPos >= 0) break;
 		Action++;
 	}
-	if (HitPos < 0) {
+	if (HitPos < 0 || HitPos > 2048) {
 		if (*Damage > 0 && CurTarMob) {
 			strcpy_s(MobName, CurTarMob->Name);
 			if (!WarnedYHO) {
