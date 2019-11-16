@@ -118,6 +118,7 @@ public:
 		void Init();
 		void AddDamage(int aDamage);
 		unsigned long long GetDPS();
+		unsigned long long GetSDPS();
 		void Sort();
 		void GetSpawn();
 		bool CheckMaster();
