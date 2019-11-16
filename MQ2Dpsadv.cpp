@@ -200,6 +200,10 @@ unsigned long long DPSMob::DPSEntry::GetDPS() {
 	return (int)(Damage.Total / (((Damage.Last - Damage.First) + 1) + Damage.AddTime));
 }
 
+unsigned long long DPSMob::DPSEntry::GetSDPS() {
+	return (int)(Damage.Total / (((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime));
+}
+
 void DPSMob::DPSEntry::Sort() {
 	DoSort = false;
 	if (Master && Master->DoSort) Master->Sort();
@@ -529,13 +533,25 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		LTopList->SetItemText(LineNum, 2, &CXStr(szTemp));
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 2, &CXStr(szTemp));
 		//DPS
-		sprintf_s(szTemp, "%llu", Ent->GetDPS());
+		char DPSoutput[MAX_STRING] = { 0 };
+		sprintf_s(DPSoutput, "%llu", Ent->GetDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(szTemp);
+			PutCommas(DPSoutput);
 		else {
-			MakeItTBMK(szTemp);
+			MakeItTBMK(DPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
 		}
+
+		//SDPS (DPS over duration of entire fight?)
+		char SDPSoutput[MAX_STRING] = { 0 };
+		sprintf_s(SDPSoutput, "%llu", Ent->GetSDPS());
+		if (!UseTBMKOutputs)
+			PutCommas(SDPSoutput);
+		else {
+			MakeItTBMK(SDPSoutput);
+			//Need to turn the strings from like 125556 to 125.5k
+		}
+		sprintf_s(szTemp, "%s (%s)", DPSoutput, SDPSoutput);
 		LTopList->SetItemText(LineNum, 3, &CXStr(szTemp));
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, &CXStr(szTemp));
 		//Time
@@ -1244,7 +1260,28 @@ PLUGIN_API VOID ShutdownPlugin(VOID) {
 PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
 	if (Active) {
-		//WriteChatf("%i: %s", Color, Line);
+		if (Debug) {
+			char buffer[MAX_STRING] = { 0 };
+			sprintf_s(buffer, Line);
+			if (strchr(buffer, '\x12')) {
+				// Message includes link (item tags/spell), must clean first
+				int len = strlen(buffer);
+				if (char* szClean = (char*)LocalAlloc(LPTR, len + 64)) {
+					strncpy_s(szClean, len + 64, Line, len);
+					CXStr out;
+#if defined(ROF2EMU) || defined(UFEMU)
+					if (CXStr* str = CleanItemTags(&out, szClean)) {
+#else
+					if (CXStr* str = CleanItemTags(&out, szClean, false)) {
+#endif
+						GetCXStr(str->Ptr, szClean, len + 64);
+					}
+					strncpy_s(buffer, _countof(buffer), szClean, len + 64);
+					LocalFree(szClean);
+					}
+				}
+			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, buffer);
+		}
 		switch (Color) {
 		case 0://Color: 0 - Task Updates
 
@@ -1306,7 +1343,7 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 286://Color: 286 - Loot Related (Master looter actions, you loot)	
 		case 287://Color: 287 - Dice Rolls	
 		case 288://Color: 288 - Other Starts Casting Messages	
-		case 289://Color: 289 - Target is out of range, get closer
+		case 289://Color: 289 - Target is out of range, get closer/Interupt/Fizzle/other spell failure
 		case 290://Color: 290 - Channel Lists after logged in
 		case 291://Color: 291 - Chat Channel 1 - Incoming
 		case 292://Color: 292 - Chat Channel 2 - Incoming
