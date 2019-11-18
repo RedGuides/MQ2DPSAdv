@@ -201,6 +201,7 @@ unsigned long long DPSMob::DPSEntry::GetDPS() {
 }
 
 unsigned long long DPSMob::DPSEntry::GetSDPS() {
+	if (((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime == 0) return 0;
 	return (int)(Damage.Total / (((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime));
 }
 
