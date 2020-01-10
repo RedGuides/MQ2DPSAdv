@@ -670,6 +670,14 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
+	
+	//Save the column widths
+	for (int i = 0; i <= 5; i++) {
+		char szColumn[16] = { 0 };
+		sprintf_s(szColumn, 16, "Column%iWidth", i);
+		sprintf_s(szTemp, "%i", LTopList->GetColumnWidth(i));
+		WritePrivateProfileString(szName, szColumn, szTemp, INIFileName);
+	}
 }
 
 void CDPSAdvWnd::LoadSettings() {
@@ -752,6 +760,16 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	FightDead = GetPrivateProfileInt(szName, "FightDead", 0xFF330000, INIFileName);
 	UseTBMKOutputs = (GetPrivateProfileInt(szName, "UseTBMKOutputs", 0, INIFileName) > 0 ? true : false);
 
+	//Restore the column widths
+	for (int i = 0; i <= 5; i++) {
+		char szTemp[16] = { 0 };
+		sprintf_s(szTemp, 16, "Column%iWidth", i);
+		int temp = GetPrivateProfileInt(szName, szTemp, 0, INIFileName);
+		if (temp != 0) {
+			LTopList->SetColumnWidth(i, temp);
+		}
+	}
+	
 	if (FightIA < 3) FightIA = 8;
 	if (FightTO < 3) FightTO = 30;
 	if (EntTO < 3) EntTO = 8;
