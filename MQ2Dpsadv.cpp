@@ -676,7 +676,7 @@ void CDPSAdvWnd::SaveLoc() {
 		char szColumn[16] = { 0 };
 		sprintf_s(szColumn, 16, "Column%iWidth", i);
 		sprintf_s(szTemp, "%i", LTopList->GetColumnWidth(i));
-		WritePrivateProfileString(szName, szColumn, szTemp, INIFileName);
+		WritePrivateProfileString(GetCharInfo()->Name, szColumn, szTemp, INIFileName);
 	}
 }
 
