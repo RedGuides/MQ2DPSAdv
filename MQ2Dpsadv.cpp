@@ -709,7 +709,7 @@ void CDPSAdvWnd::LoadSettings() {
 	CShowTotal->InsertChoice("");
 	CShowTotal->SetChoice(ShowTotal);
 	//Make Columns resizable.
-	LTopList->bColumnSizable = true;
+	LTopList->SetColumnsSizable(true);
 }
 
 void CDPSAdvWnd::LoadLoc(char szChar[256]) {
