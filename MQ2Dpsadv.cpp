@@ -197,12 +197,24 @@ void DPSMob::DPSEntry::AddDamage(int aDamage) {
 }
 
 unsigned long long DPSMob::DPSEntry::GetDPS() {
-	return (int)(Damage.Total / (((Damage.Last - Damage.First) + 1) + Damage.AddTime));
+	//Damage.Total is:		475082
+	//Damage.Last is:		1580130211
+	//Damage.First is:		1580130212
+	//Damage.AddTime is:	0
+	//below code fixes this corner case scenario. -eqmule
+	__int64 dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
+	if (dividetotal == 0)
+	{
+		dividetotal++;
+	}
+	return (__int64)(Damage.Total / dividetotal);
 }
 
 unsigned long long DPSMob::DPSEntry::GetSDPS() {
 	auto val = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
-	if (val == 0) return 0;
+	if (val == 0)
+		return 0;
+	//why is this cast to an int?
 	return (int)(Damage.Total / val);
 }
 
