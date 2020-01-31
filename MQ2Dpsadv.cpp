@@ -202,12 +202,12 @@ unsigned long long DPSMob::DPSEntry::GetDPS() {
 	//Damage.First is:		1580130212
 	//Damage.AddTime is:	0
 	//below code fixes this corner case scenario. -eqmule
-	__int64 dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
+	int64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
 	if (dividetotal == 0)
 	{
 		dividetotal++;
 	}
-	return (__int64)(Damage.Total / dividetotal);
+	return (int64_t)(Damage.Total / dividetotal);
 }
 
 unsigned long long DPSMob::DPSEntry::GetSDPS() {
