@@ -1,15 +1,4 @@
-// DPS ADV CREATED BY WARNEN 2008-2009
-// MQ2DPSAdv.cpp
-
-#include "../MQ2Plugin.h"
-using namespace std;
-PreSetup("MQ2DPSAdv");
-#include <vector>
-#include "MQ2DPSAdv.h"
-
-#define DPSVERSION "1.3.00"
-//#define DPSDEV
-
+// MQ2DPSAdv.cpp : Created by Warnen 2008-2009
 /*
  ### UPDATE THIS IF YOU MAKE A CHANGE ###
  == 10/20/19 == 1.3.00 (Chatwiththisname)
@@ -102,7 +91,149 @@ This update includes UI XML Changes. Make sure you replace the old UI File.
 
 */
 
-// ############################### DPSEntry Start ############################################
+#include <mq/Plugin.h>
+
+PreSetup("MQ2DPSAdv");
+PLUGIN_VERSION(1.3);
+
+char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", 0 };
+char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", 0 };
+enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
+enum { NOTOTAL, TOTALABOVE, TOTALSECOND, TOTALBOTTOM };
+
+PSPAWNINFO CurTarget;
+time_t Intervals;
+int CListType;
+int MaxDmgLast;
+int MeColor;
+int MeTopColor;
+int NormalColor;
+int NPCColor;
+int TotalColor;
+int EntHover;
+int EntHighlight;
+int FightNormal;
+int FightHover;
+int FightHighlight;
+int FightActive;
+int FightInActive;
+int FightDead;
+bool Saved;
+bool WarnedYHO, WarnedOHO;
+bool Debug;
+bool Active;
+bool Zoning;
+bool WrongUI;
+bool ShowMeTop;
+bool ShowMeMin;
+int ShowMeMinNum;
+bool UseRaidColors;//Use colors from set raid colors for each class display. 
+bool LiveUpdate;//Update Total/DPS/Time/% as it happens instead of a set pulse.
+int ShowTotal;
+int FightIA;//Fight Inactive.
+int FightTO;//Fight Timeout.
+int EntTO;//Entity Timeout.
+bool UseTBMKOutputs = false;//Intended to show 1.4t, 1.5m, 343k etc outputs for total and DPS.
+
+struct EntDamage {
+	uint64_t Total;
+	time_t First;
+	time_t Last;
+	int AddTime;
+};
+
+class DPSMob {
+public:
+	class DPSEntry {
+	public:
+		char Name[64];
+		bool DoSort;
+		bool Pets;
+		bool CheckPetName;
+		bool UsingPetName;
+		int SpawnType;
+		int Class;
+		bool Mercenary;
+		EntDamage Damage;
+		DPSMob* Parent;
+		PSPAWNINFO Spawn;
+		DPSEntry* Master;
+
+		DPSEntry();
+		DPSEntry(char EntName[64], DPSMob* pParent);
+		void Init();
+		void AddDamage(int aDamage);
+		unsigned long long GetDPS();
+		unsigned long long GetSDPS();
+		void Sort();
+		void GetSpawn();
+		bool CheckMaster();
+	};
+
+	char Name[64];
+	char Tag[8];
+	int SpawnType;
+	PSPAWNINFO Spawn;
+	bool Active;
+	bool InActive;
+	bool Dead;
+	bool PetName;
+	bool Mercenary;
+	EntDamage Damage;
+	DPSEntry* LastEntry;
+	std::vector<DPSEntry*> EntList;
+
+	DPSMob();
+	DPSMob(const char* MobName, size_t MobLen);
+	void Init();
+	void AddDamage(int aDamage);
+	void GetSpawn();
+	bool IsPet();
+	DPSEntry* GetEntry(char EntName[64], bool Create = true);
+};
+
+std::vector<DPSMob*> MobList;
+DPSMob* LastMob;
+DPSMob* CurTarMob;
+DPSMob* CurListMob;
+DPSMob* CurMaxMob;
+
+class CDPSAdvWnd : public CCustomWnd {
+public:
+	CTabWnd* Tabs;
+	CListWnd* LTopList;
+	CComboWnd* CMobList;
+	CCheckBoxWnd* CShowMeTop;
+	CCheckBoxWnd* CShowMeMin;
+	CEditWnd* TShowMeMin;
+	CCheckBoxWnd* CUseRaidColors;
+	CCheckBoxWnd* CLiveUpdate;
+	CCheckBoxWnd* CUseTBMKOutput;
+	CEditWnd* TFightIA;
+	CEditWnd* TFightTO;
+	CEditWnd* TEntTO;
+	CComboWnd* CShowTotal;
+	bool ReSort;
+
+	CDPSAdvWnd();
+	~CDPSAdvWnd();
+	void DrawList(bool DoDead = false);
+	void SetTotal(int LineNum, DPSMob* Mob);
+	void DrawCombo();
+	void LoadLoc(char szChar[64] = 0);
+	void LoadSettings();
+	void SaveLoc();
+	void SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total = false, bool MeTop = false);
+	int WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown);
+	void SaveSetting(PCHAR Key, PCHAR Value, ...);
+
+};
+CDPSAdvWnd* DPSWnd = 0;
+
+void CheckActive() {
+	if (DPSWnd && DPSWnd->IsVisible() && !Zoning && !WrongUI) Active = true;
+	else Active = false;
+}
 
 DPSMob::DPSEntry::DPSEntry() {
 	Init();
@@ -186,13 +317,13 @@ void DPSMob::DPSEntry::AddDamage(int aDamage) {
 		return;
 	}
 	DoSort = true;
-	if (Damage.First && (time(NULL) - Damage.Last >= EntTO)) {
+	if (Damage.First && (time(nullptr) - Damage.Last >= EntTO)) {
 		Damage.AddTime += (int)(Damage.Last - Damage.First) + 1;
 		Damage.First = 0;
 	}
 	Damage.Total += aDamage;
-	Damage.Last = time(NULL);
-	if (!Damage.First) Damage.First = time(NULL);
+	Damage.Last = time(nullptr);
+	if (!Damage.First) Damage.First = time(nullptr);
 	Parent->AddDamage(aDamage);
 }
 
@@ -247,7 +378,7 @@ DPSMob::DPSMob() {
 	Init();
 }
 
-DPSMob::DPSMob(PCHAR MobName, size_t MobLen) {
+DPSMob::DPSMob(const char* MobName, size_t MobLen) {
 	Init();
 	strcpy_s(Name, MobName);
 	GetSpawn();
@@ -293,8 +424,8 @@ bool DPSMob::IsPet() {
 
 void DPSMob::AddDamage(int aDamage) {
 	Damage.Total += aDamage;
-	Damage.Last = time(NULL);
-	if (!Damage.First) Damage.First = time(NULL);
+	Damage.Last = time(nullptr);
+	if (!Damage.First) Damage.First = time(nullptr);
 	if (!Active) {
 		Active = true;
 		sprintf_s(Tag, "[A] ");
@@ -336,13 +467,13 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	//DPS Settings Tab
 	if (!(CShowMeTop = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeTopBox"))) CheckUI = true;
 	if (!(CShowMeMin = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeMinBox"))) CheckUI = true;
-	if (!(TShowMeMin = (CTextEntryWnd*)GetChildItem("DPS_ShowMeMinInput"))) CheckUI = true;
+	if (!(TShowMeMin = (CEditWnd*)GetChildItem("DPS_ShowMeMinInput"))) CheckUI = true;
 	if (!(CUseRaidColors = (CCheckBoxWnd*)GetChildItem("DPS_UseRaidColorsBox"))) CheckUI = true;
 	if (!(CLiveUpdate = (CCheckBoxWnd*)GetChildItem("DPS_LiveUpdateBox"))) CheckUI = true;
 	if (!(CUseTBMKOutput = (CCheckBoxWnd*)GetChildItem("DPS_UseTBMKOutputBox"))) CheckUI = true;
-	if (!(TFightIA = (CTextEntryWnd*)GetChildItem("DPS_FightIAInput"))) CheckUI = true;
-	if (!(TFightTO = (CTextEntryWnd*)GetChildItem("DPS_FightTOInput"))) CheckUI = true;
-	if (!(TEntTO = (CTextEntryWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
+	if (!(TFightIA = (CEditWnd*)GetChildItem("DPS_FightIAInput"))) CheckUI = true;
+	if (!(TFightTO = (CEditWnd*)GetChildItem("DPS_FightTOInput"))) CheckUI = true;
+	if (!(TEntTO = (CEditWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
 	if (!(CShowTotal = (CComboWnd*)GetChildItem("DPS_ShowTotal"))) CheckUI = true;
 	//End DPS Settings Tab
 
@@ -366,7 +497,6 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 		WrongUI = false;
 
 	LoadLoc();
-	SetWndNotification(CDPSAdvWnd);
 	CMobList->SetColors(0xFFCC3333, 0xFF666666, 0xFF000000);
 	Tabs->UpdatePage();
 	DrawCombo();
@@ -402,44 +532,13 @@ void CDPSAdvWnd::DrawCombo() {
 	else CMobList->SetChoice(CurSel >= 0 ? CurSel : 0);
 }
 
-void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
-	CHAR szTemp[MAX_STRING] = { 0 };
-	SetLineColors(LineNum, 0, true);
-	//Index
-	LTopList->SetItemText(LineNum, 0, &CXStr("-"));
-	//Name
-	LTopList->SetItemText(LineNum, 1, &CXStr("Total"));
-	//Total
-	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
-	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
-	else {
-		MakeItTBMK(szTemp);
-		//Need to turn the strings from like 125556 to 125.5k
-	}
-	LTopList->SetItemText(LineNum, 2, &CXStr(szTemp));
-	//DPS
-	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
-	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
-	else {
-		MakeItTBMK(szTemp);
-		//Need to turn the strings from like 125556 to 125.5k
-	}
-	LTopList->SetItemText(LineNum, 3, &CXStr(szTemp));
-	//Time
-	sprintf_s(szTemp, "%I64is", CurListMob->Damage.Last - CurListMob->Damage.First);
-	LTopList->SetItemText(LineNum, 4, &CXStr(szTemp));
-	//This is where Percentage would go, if it wasn't always going to be 100%, if more columns are added, make sure to skip 5!
-}
-
-void ReverseString(PCHAR szLine) {
+void ReverseString(char* szLine) {
 	std::string temp2 = szLine;
 	std::reverse(temp2.rbegin(), temp2.rend());
 	sprintf_s(szLine, MAX_STRING, temp2.c_str());
 }
 
-void PutCommas(PCHAR szLine) {
+void PutCommas(char* szLine) {
 	ReverseString(szLine);
 	unsigned int j = 0;
 	char temp[MAX_STRING] = { 0 };
@@ -455,8 +554,8 @@ void PutCommas(PCHAR szLine) {
 	ReverseString(szLine);
 }
 
-void MakeItTBMK(PCHAR szLine) {
-	unsigned long long value = _atoi64(szLine);
+void MakeItTBMK(char* szLine) {
+	uint64_t value = GetInt64FromString(szLine, 0);
 	if (value >= 1000000000000) {
 		value = value / 100000000000;
 		_i64toa_s(value, szLine, MAX_STRING, 10);
@@ -489,6 +588,37 @@ void MakeItTBMK(PCHAR szLine) {
 		sprintf_s(szLine, MAX_STRING, temp.c_str());
 		strcat_s(szLine, MAX_STRING, " k");
 	}
+}
+
+void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
+	CHAR szTemp[MAX_STRING] = { 0 };
+	SetLineColors(LineNum, 0, true);
+	//Index
+	LTopList->SetItemText(LineNum, 0, "-");
+	//Name
+	LTopList->SetItemText(LineNum, 1, "Total");
+	//Total
+	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
+	if (!UseTBMKOutputs)
+		PutCommas(szTemp);
+	else {
+		MakeItTBMK(szTemp);
+		//Need to turn the strings from like 125556 to 125.5k
+	}
+	LTopList->SetItemText(LineNum, 2, szTemp);
+	//DPS
+	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
+	if (!UseTBMKOutputs)
+		PutCommas(szTemp);
+	else {
+		MakeItTBMK(szTemp);
+		//Need to turn the strings from like 125556 to 125.5k
+	}
+	LTopList->SetItemText(LineNum, 3, szTemp);
+	//Time
+	sprintf_s(szTemp, "%I64us", static_cast<uint64_t>(CurListMob->Damage.Last) - static_cast<uint64_t>(CurListMob->Damage.First));
+	LTopList->SetItemText(LineNum, 4, szTemp);
+	//This is where Percentage would go, if it wasn't always going to be 100%, if more columns are added, make sure to skip 5!
 }
 
 void CDPSAdvWnd::DrawList(bool DoDead) {
@@ -527,15 +657,15 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		SetLineColors(LineNum, Ent);
 		//Placement Index
 		sprintf_s(szTemp, "%i", LineNum - RankAdj + 1);
-		LTopList->SetItemText(LineNum, 0, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 0, &CXStr(szTemp));
+		LTopList->SetItemText(LineNum, 0, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 0, szTemp);
 		sprintf_s(szTemp, "%s", Ent->Name);
 		if (gAnonymize) {
 			Anonymize(szTemp, 256, 2);
 		}
 		sprintf_s(szTemp, "%s%s%s", Ent->Mercenary ? "[M] " : "", szTemp, Ent->Pets ? "*" : "");
-		LTopList->SetItemText(LineNum, 1, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 1, &CXStr(szTemp));
+		LTopList->SetItemText(LineNum, 1, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 1, szTemp);
 		//Total Damage
 		sprintf_s(szTemp, "%llu", Ent->Damage.Total);
 		if (!UseTBMKOutputs)
@@ -544,8 +674,8 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 			MakeItTBMK(szTemp);
 			//Need to turn the strings from like 125556 to 125.5k
 		}
-		LTopList->SetItemText(LineNum, 2, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 2, &CXStr(szTemp));
+		LTopList->SetItemText(LineNum, 2, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 2, szTemp);
 		//DPS
 		char DPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(DPSoutput, "%llu", Ent->GetDPS());
@@ -566,17 +696,17 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 			//Need to turn the strings from like 125556 to 125.5k
 		}
 		sprintf_s(szTemp, "%s (%s)", DPSoutput, SDPSoutput);
-		LTopList->SetItemText(LineNum, 3, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, &CXStr(szTemp));
+		LTopList->SetItemText(LineNum, 3, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, szTemp);
 		//Time
-		sprintf_s(szTemp, "%I64is", Ent->Damage.Last - Ent->Damage.First);
-		LTopList->SetItemText(LineNum, 4, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 4, &CXStr(szTemp));
+		sprintf_s(szTemp, "%I64us", static_cast<uint64_t>(Ent->Damage.Last) - static_cast<uint64_t>(Ent->Damage.First));
+		LTopList->SetItemText(LineNum, 4, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 4, szTemp);
 		//Percentage of Damage
 		sprintf_s(szTemp, "%2.0f", (((float)Ent->Damage.Total / (float)CurListMob->Damage.Total) * 100.0f));
 		strcat_s(szTemp, "%");
-		LTopList->SetItemText(LineNum, 5, &CXStr(szTemp));
-		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 5, &CXStr(szTemp));
+		LTopList->SetItemText(LineNum, 5, szTemp);
+		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 5, szTemp);
 
 	}
 	if (ShowTotal == TOTALBOTTOM) {
@@ -616,7 +746,7 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 	}
 	else if (UseRaidColors && Ent->Class && (Ent->SpawnType == SPAWN_PLAYER || Ent->Mercenary)) {
 		LTopList->SetItemColor(LineNum, 0, NormalColor);
-		LTopList->SetItemColor(LineNum, 1, ((PEQRAIDWINDOW)pRaidWnd)->ClassColors[ClassInfo[Ent->Class].RaidColorOrder]);
+		LTopList->SetItemColor(LineNum, 1, pRaidWnd->ClassColors[ClassInfo[Ent->Class].RaidColorOrder]);
 		LTopList->SetItemColor(LineNum, 2, NormalColor);
 		LTopList->SetItemColor(LineNum, 3, NormalColor);
 		LTopList->SetItemColor(LineNum, 4, NormalColor);
@@ -631,17 +761,7 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 5, NormalColor);
 	}
 }
-/*
-void CDPSAdvWnd::SaveSetting(PCHAR Key, PCHAR Value, ...) {
-   char zOutput[MAX_STRING]; va_list vaList; va_start(vaList,Value);
-   vsprintf_s(zOutput,Value,vaList);
-   WritePrivateProfileString(GetCharInfo()->Name, Key, zOutput, INIFileName);
-   if (!Saved) {
-	  Saved = true;
-	  WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
-   }
-}
-*/
+
 void CDPSAdvWnd::SaveLoc() {
 	if (!GetCharInfo()) return;
 	CHAR szTemp[MAX_STRING] = { 0 };
@@ -693,24 +813,18 @@ void CDPSAdvWnd::SaveLoc() {
 }
 
 void CDPSAdvWnd::LoadSettings() {
-	CHAR szTemp[MAX_STRING] = { 0 };
-
 	//Set the check boxes to their current settings.
-	CShowMeTop->Checked = ShowMeTop ? 1 : 0;
-	CShowMeMin->Checked = ShowMeMin ? 1 : 0;
-	CUseRaidColors->Checked = UseRaidColors ? 1 : 0;
-	CLiveUpdate->Checked = LiveUpdate ? 1 : 0;
-	CUseTBMKOutput->Checked = UseTBMKOutputs ? 1 : 0;
+	CShowMeTop->SetCheck(ShowMeTop);
+	CShowMeMin->SetCheck(ShowMeMin);
+	CUseRaidColors->SetCheck(UseRaidColors);
+	CLiveUpdate->SetCheck(LiveUpdate);
+	CUseTBMKOutput->SetCheck(UseTBMKOutputs);
 
 	//Set the text in the Inputboxes to their current setting.
-	sprintf_s(szTemp, "%i", ShowMeMinNum);
-	SetCXStr(&TShowMeMin->InputText, szTemp);
-	sprintf_s(szTemp, "%i", FightIA);
-	SetCXStr(&TFightIA->InputText, szTemp);
-	sprintf_s(szTemp, "%i", FightTO);
-	SetCXStr(&TFightTO->InputText, szTemp);
-	sprintf_s(szTemp, "%i", EntTO);
-	SetCXStr(&TEntTO->InputText, szTemp);
+	TShowMeMin->InputText = ShowMeMinNum;
+	TFightIA->InputText = FightIA;
+	TFightTO->InputText = FightTO;
+	TEntTO->InputText = EntTO;
 
 	//Clear and populate the ComboBox options for Show Total
 	CShowTotal->DeleteAll();
@@ -731,13 +845,13 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	char szName[256] = { 0 };
 	if (!szChar) strcpy_s(szName, GetCharInfo()->Name);
 	else strcpy_s(szName, szChar);
-	Saved = (GetPrivateProfileInt(szName, "Saved", 0, INIFileName) > 0 ? true : false);
+	Saved = GetPrivateProfileBool(szName, "Saved", false, INIFileName);
 	if (Saved) {
 		SetLocation({ 
-			(LONG)GetPrivateProfileInt(szName, "Left", 0, INIFileName),
-			(LONG)GetPrivateProfileInt(szName, "Top", 0, INIFileName),
-			(LONG)GetPrivateProfileInt(szName, "Right", 0, INIFileName),
-			(LONG)GetPrivateProfileInt(szName, "Bottom", 0, INIFileName) 
+			GetPrivateProfileInt(szName, "Left", 0, INIFileName),
+			GetPrivateProfileInt(szName, "Top", 0, INIFileName),
+			GetPrivateProfileInt(szName, "Right", 0, INIFileName),
+			GetPrivateProfileInt(szName, "Bottom", 0, INIFileName) 
 		});
 
 		SetAlpha((BYTE)GetPrivateProfileInt(szName, "Alpha", 0, INIFileName));
@@ -785,25 +899,33 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	if (FightIA < 3) FightIA = 8;
 	if (FightTO < 3) FightTO = 30;
 	if (EntTO < 3) EntTO = 8;
-	if (Debug) gSpewToFile = TRUE;
+	if (Debug) gSpewToFile = true;
 	if (CListType > 1) CListType = CLISTTARGET;
 	LTopList->SetColors(NormalColor, EntHover, EntHighlight);
 	CMobList->SetChoice(CListType);
 	LoadSettings();
 }
 
+void ListSwitch(DPSMob* Switcher) {
+	CurListMob = Switcher;
+	DPSWnd->LTopList->SetCurSel(-1);
+	DPSWnd->LTopList->SetVScrollPos(0);
+	DPSWnd->DrawList(true);
+	DPSWnd->DrawCombo();
+}
+
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
-	if (Message == 10) CheckActive();
-	if (Message == 3 && pWnd == (CXWnd*)LTopList) LTopList->SetCurSel(-1);
-	else if (Message == 10 && pWnd == (CXWnd*)DPSWnd) CheckActive();
-	else if (Message == 1) {
+	if (Message == XWM_CLOSE) CheckActive();
+	if (Message == XWM_RCLICK && pWnd == (CXWnd*)LTopList) LTopList->SetCurSel(-1);
+	else if (Message == XWM_CLOSE && pWnd == (CXWnd*)DPSWnd) CheckActive();
+	else if (Message == XWM_LCLICK) {
 		if (pWnd == (CXWnd*)Tabs) LoadSettings();
-		else if (pWnd == (CXWnd*)CShowMeTop) ShowMeTop = CShowMeTop->Checked ? true : false;
-		else if (pWnd == (CXWnd*)CShowMeMin) ShowMeMin = CShowMeMin->Checked ? true : false;
-		else if (pWnd == (CXWnd*)CUseRaidColors) UseRaidColors = CUseRaidColors->Checked ? true : false;
-		else if (pWnd == (CXWnd*)CLiveUpdate) LiveUpdate = CLiveUpdate->Checked ? true : false;
-		else if (pWnd == (CXWnd*)CUseTBMKOutput) UseTBMKOutputs = CUseTBMKOutput->Checked ? true : false;
+		else if (pWnd == (CXWnd*)CShowMeTop) ShowMeTop = CShowMeTop->bChecked;
+		else if (pWnd == (CXWnd*)CShowMeMin) ShowMeMin = CShowMeMin->bChecked;
+		else if (pWnd == (CXWnd*)CUseRaidColors) UseRaidColors = CUseRaidColors->bChecked;
+		else if (pWnd == (CXWnd*)CLiveUpdate) LiveUpdate = CLiveUpdate->bChecked;
+		else if (pWnd == (CXWnd*)CUseTBMKOutput) UseTBMKOutputs = CUseTBMKOutput->bChecked;
 		//else if (pWnd == (CXWnd*)LTopList) WriteChatf("CurSel: %i", LTopList->GetCurSel());
 		else if (pWnd == (CXWnd*)CShowTotal) {
 			ShowTotal = CShowTotal->GetCurChoice();
@@ -838,40 +960,29 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 			Intervals -= 1; // Force update next Pulse.
 		}
 	}
-	else if (Message == 14) {
-		CHAR szTemp[MAX_STRING] = { 0 };
-		GetCXStr(((CEditWnd*)pWnd)->InputText, szTemp);
+	else if (Message == XWM_NEWVALUE) {
 		if (pWnd == (CXWnd*)TShowMeMin) {
-			if (strlen(szTemp)) {
-				szTemp[2] = 0;
-				ShowMeMinNum = atoi(szTemp);
-				sprintf_s(szTemp, "%i", ShowMeMinNum);
-				SetCXStr(&TShowMeMin->InputText, szTemp);
-				TShowMeMin->SetSel(strlen(szTemp), 0);
+			if (!TShowMeMin->InputText.empty()) {
+				ShowMeMinNum = GetIntFromString(TShowMeMin->InputText, 0);
+				TShowMeMin->SetSel(TShowMeMin->InputText.length(), 0);
 			}
 		}
 		else if (pWnd == (CXWnd*)TFightIA) {
-			if (strlen(szTemp)) {
-				szTemp[2] = 0;
-				FightIA = atoi(szTemp);
+			if (!TFightIA->InputText.empty()) {
+				FightIA = GetIntFromString(TFightIA->InputText, 0);
 				if (FightIA < 3) FightIA = 8;
-				sprintf_s(szTemp, "%i", FightIA);
 			}
 		}
 		else if (pWnd == (CXWnd*)TFightTO) {
-			if (strlen(szTemp)) {
-				szTemp[2] = 0;
-				FightTO = atoi(szTemp);
+			if (!TFightTO->InputText.empty()) {
+				FightTO = GetIntFromString(TFightTO->InputText, 0);
 				if (FightTO < 3) FightTO = 30;
-				sprintf_s(szTemp, "%i", FightTO);
 			}
 		}
 		else if (pWnd == (CXWnd*)TEntTO) {
-			if (strlen(szTemp)) {
-				szTemp[2] = 0;
-				EntTO = atoi(szTemp);
+			if (!TEntTO->InputText.empty()) {
+				EntTO = GetIntFromString(TEntTO->InputText, 0);
 				if (EntTO < 3) EntTO = 8;
-				sprintf_s(szTemp, "%i", EntTO);
 			}
 		}
 	}
@@ -899,14 +1010,14 @@ template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Cre
 	return 0;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitOther(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
 	if (strstr(Line, "injured by falling"))
 		return false;
 	int HitPos = 0, Action = 0;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	while (OtherHits[Action]) {
 		HitPos = (int)(strstr(Line, OtherHits[Action]) - Line);
 		if (HitPos > 0)
@@ -932,13 +1043,13 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 	return true;
 }
 
-template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&MobName)[_MobSize], int* Damage)
+template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, char(&MobName)[_MobSize], int* Damage)
 {
 	int Action = 0, HitPos = 0, DmgPos, MobStart, MobLength;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	while (YourHits[Action]) {
 		HitPos = (int)(strstr(Line, YourHits[Action]) - Line);
 		if (HitPos >= 0) break;
@@ -964,13 +1075,13 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&M
 	return true;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
 	if (strstr(Line, "You were hit"))
 		return false;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 
-	*Damage = atoi(strpbrk(Line, "1234567890"));
+	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 
 	char temp[MAX_STRING] = "";
 	sprintf_s(temp, " for %i", *Damage);
@@ -1053,7 +1164,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 	return false;
 }
 
-template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)[_MobSize])
+template <unsigned int _MobSize>bool SplitStringDeath(const char* Line, char(&MobName)[_MobSize])
 {
 	int MobStart = 0, MobLength = 0;
 	MobLength = (int)(strstr(Line, " died.") - Line);
@@ -1069,11 +1180,11 @@ template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)
 	return true;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	if (*Damage <= 0 || strstr(Line, " damage by "))
 		return false;
 	int MobEnd = (int)(strstr(Line, " has taken ") - Line);
@@ -1107,7 +1218,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 	return true;
 }
 
-void HandleNonMelee(PCHAR Line) {
+void HandleNonMelee(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
@@ -1117,7 +1228,7 @@ void HandleNonMelee(PCHAR Line) {
 	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
-void HandleDOT(PCHAR Line) {
+void HandleDOT(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
@@ -1127,7 +1238,7 @@ void HandleDOT(PCHAR Line) {
 	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 }
 
-void HandleOtherHitOther(PCHAR Line) {
+void HandleOtherHitOther(const char* Line) {
 	char EntName[256] = { 0 }, MobName[256] = { 0 };
 	int Damage;
 	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
@@ -1140,7 +1251,7 @@ void HandleOtherHitOther(PCHAR Line) {
 	}
 }
 
-void HandleYouHitOther(PCHAR Line) {
+void HandleYouHitOther(const char* Line) {
 	char MobName[256] = { 0 };
 	int Damage;
 	if (!SplitStringYouHitOther(Line, MobName, &Damage))
@@ -1151,18 +1262,6 @@ void HandleYouHitOther(PCHAR Line) {
 			if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
 				entry->AddDamage(Damage);
 			}
-		}
-	}
-}
-
-void HandleDeath(PCHAR Line) {
-	char MobName[256] = { 0 };
-	if (!SplitStringDeath(Line, MobName)) return;
-	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
-	if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
-		HandleDeath(DeadMob);
-		if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
-			DPSWnd->DrawCombo();
 		}
 	}
 }
@@ -1184,11 +1283,17 @@ void HandleDeath(DPSMob* DeadMob) {
 	DeadMob->Dead = true;
 }
 
-#ifdef DPSDEV
-void DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine) {
-
+void HandleDeath(const char* Line) {
+	char MobName[256] = { 0 };
+	if (!SplitStringDeath(Line, MobName)) return;
+	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
+	if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
+		HandleDeath(DeadMob);
+		if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
+			DPSWnd->DrawCombo();
+		}
+	}
 }
-#endif
 
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	char Arg1[MAX_STRING];
@@ -1227,20 +1332,6 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	CheckActive();
 }
 
-void CreateDPSWindow() {
-	if (DPSWnd) DestroyDPSWindow();
-	if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
-		DPSWnd = new CDPSAdvWnd();
-		if (DPSWnd->IsVisible()) {
-			((CXWnd*)DPSWnd)->Show(1, 1);
-		}
-		char szTitle[MAX_STRING];
-		sprintf_s(szTitle, "DPS Advanced v%s", DPSVERSION);
-		DPSWnd->CSetWindowText(szTitle);
-	}
-	CheckActive();
-}
-
 void DestroyDPSWindow() {
 	if (DPSWnd) {
 		DPSWnd->SaveLoc();
@@ -1250,17 +1341,40 @@ void DestroyDPSWindow() {
 	CheckActive();
 }
 
-PLUGIN_API VOID SetGameState(DWORD GameState) {
+void CreateDPSWindow() {
+	if (DPSWnd) DestroyDPSWindow();
+	if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
+		DPSWnd = new CDPSAdvWnd();
+		if (DPSWnd->IsVisible()) {
+			((CXWnd*)DPSWnd)->Show(1, 1);
+		}
+		char szTitle[MAX_STRING];
+		sprintf_s(szTitle, "DPS Advanced v%0.2f", MQ2Version);
+		DPSWnd->SetWindowText(szTitle);
+	}
+	CheckActive();
+}
+
+PLUGIN_API void SetGameState(int GameState)
+{
 	DebugSpewAlways("GameState Change: %i", GameState);
 	if (GameState == GAMESTATE_INGAME) {
 		if (!DPSWnd) CreateDPSWindow();
 	}
 }
 
-PLUGIN_API VOID OnCleanUI(VOID) { DestroyDPSWindow(); }
-PLUGIN_API VOID OnReloadUI(VOID) { if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow(); }
+PLUGIN_API void OnCleanUI()
+{
+	DestroyDPSWindow();
+}
 
-PLUGIN_API VOID InitializePlugin(VOID) {
+PLUGIN_API void OnReloadUI()
+{
+	if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow();
+}
+
+PLUGIN_API void InitializePlugin()
+{
 	LastMob = 0;
 	CurTarget = 0;
 	CurTarMob = 0;
@@ -1269,50 +1383,50 @@ PLUGIN_API VOID InitializePlugin(VOID) {
 	Zoning = false;
 	ShowMeTop = false;
 	WrongUI = false;
-	AddXMLFile("MQUI_DPSAdvWnd.xml");
+	// TODO:  Add as a resource to automatically unpack
+	if (IsXMLFilePresent("MQUI_DPSAdvWnd.xml")) {
+		AddXMLFile("MQUI_DPSAdvWnd.xml");
+	} else {
+		WriteChatf("MQ2DPSAdv:  Could not find MQUI_DPSAdvWnd.xml.  Please place in resources/uifiles/default");
+	}
 	AddCommand("/dpsadv", DPSAdvCmd);
-#ifdef DPSDEV
-	AddCommand("/dpstest", DPSTestCmd);
-#endif
 	CheckActive();
-	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
-	else CreateDPSWindow();
+	if (gGameState == GAMESTATE_INGAME && pCharSpawn)
+	{
+		CreateDPSWindow();
+	}
 }
 
-PLUGIN_API VOID ShutdownPlugin(VOID) {
+PLUGIN_API void ShutdownPlugin()
+{
 	DestroyDPSWindow();
 	RemoveCommand("/dpsadv");
-#ifdef DPSDEV
-	RemoveCommand("/dpstest");
-#endif
 }
 
 
-
-PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
+PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
+{
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
 	if (Active) {
 		if (Debug) {
-			char buffer[MAX_STRING] = { 0 };
-			sprintf_s(buffer, Line);
-			if (strchr(buffer, '\x12')) {
-				// Message includes link (item tags/spell), must clean first
-				int len = strlen(buffer);
-				if (char* szClean = (char*)LocalAlloc(LPTR, len + 64)) {
-					strncpy_s(szClean, len + 64, Line, len);
-					CXStr out;
-#if defined(ROF2EMU) || defined(UFEMU)
-					if (CXStr* str = CleanItemTags(&out, szClean)) {
-#else
-					if (CXStr* str = CleanItemTags(&out, szClean, false)) {
-#endif
-						GetCXStr(str->Ptr, szClean, len + 64);
-					}
-					strncpy_s(buffer, _countof(buffer), szClean, len + 64);
-					LocalFree(szClean);
-					}
-				}
-			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, buffer);
+			char szMsg[MAX_STRING] = { 0 };
+			strcpy_s(szMsg, Line);
+			int len = strlen(szMsg);
+
+			auto pszCleanOrg = std::make_unique<char[]>(len + 64);
+			char* szClean = pszCleanOrg.get();
+
+			strcpy_s(szClean, len + 64, szMsg);
+
+			if (strchr(szClean, '\x12'))
+			{
+				CXStr out = CleanItemTags(szClean, false);
+				strcpy_s(szClean, len + 64, out.c_str());
+			}
+
+			strncpy_s(szMsg, szClean, MAX_STRING - 1);
+
+			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, szMsg);
 		}
 		switch (Color) {
 		case 0://Color: 0 - Task Updates
@@ -1484,25 +1598,12 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 }
 
 bool CheckInterval() {
-	if (!Intervals) Intervals = time(NULL);
-	else if (Intervals != time(NULL)) {
-		Intervals = time(NULL);
+	if (!Intervals) Intervals = time(nullptr);
+	else if (Intervals != time(nullptr)) {
+		Intervals = time(nullptr);
 		return true;
 	}
 	return false;
-}
-
-void CheckActive() {
-	if (DPSWnd && DPSWnd->IsVisible() && !Zoning && !WrongUI) Active = true;
-	else Active = false;
-}
-
-void ListSwitch(DPSMob* Switcher) {
-	CurListMob = Switcher;
-	DPSWnd->LTopList->SetCurSel(-1);
-	DPSWnd->LTopList->SetVScrollPos(0);
-	DPSWnd->DrawList(true);
-	DPSWnd->DrawCombo();
 }
 
 void TargetSwitch() {
@@ -1522,16 +1623,16 @@ void IntPulse() {
 			i--;
 		}
 		else {
-			if (Mob->Active && !Mob->Dead && time(NULL) - Mob->Damage.Last > FightTO) {
+			if (Mob->Active && !Mob->Dead && time(0) - Mob->Damage.Last > FightTO) {
 				HandleDeath(Mob);
 				CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(NULL) - Mob->Damage.Last > FightIA) {
+			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(nullptr) - Mob->Damage.Last > FightIA) {
 				Mob->InActive = true;
 				sprintf_s(Mob->Tag, "[IA] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(NULL) - Mob->Damage.Last < FightIA) {
+			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(nullptr) - Mob->Damage.Last < FightIA) {
 				Mob->InActive = false;
 				sprintf_s(Mob->Tag, "[A] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
@@ -1545,7 +1646,7 @@ void IntPulse() {
 	//WriteChatf("Active: %s", Active ? "Yes" : "No");
 }
 
-PLUGIN_API VOID OnPulse(VOID) {
+PLUGIN_API void OnPulse() {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
 
 	if (Active && !WrongUI) {
@@ -1556,7 +1657,7 @@ PLUGIN_API VOID OnPulse(VOID) {
 	}
 }
 
-PLUGIN_API VOID OnRemoveSpawn(PSPAWNINFO pSpawn)
+PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 {
 	if (!Zoning) {
 		DPSMob* pMob = 0;
@@ -1591,13 +1692,13 @@ void ZoneProcess() {
 	}
 }
 
-PLUGIN_API VOID OnBeginZone(VOID) {
+PLUGIN_API void OnBeginZone() {
 	ZoneProcess();
 	Zoning = true;
 	CheckActive();
 }
 
-PLUGIN_API VOID OnEndZone(VOID) {
+PLUGIN_API void OnEndZone() {
 	Zoning = false;
 	CheckActive();
 }
