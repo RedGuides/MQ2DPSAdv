@@ -12,7 +12,7 @@
 
  Changed where Anon was happening. It was happening during the entity creation instead of just anonymizing
  the string being written to the listbox for the name. I've changed, so now you can "/caption anon on" mid
- combat and it won't create a new entry in the listbox. 
+ combat and it won't create a new entry in the listbox.
 
  == Unknown == 1.2.07 (Chatwiththisname)
  Add new column %, to show percentage of damage per entry (ShowTotal is an exception)
@@ -127,7 +127,7 @@ bool WrongUI;
 bool ShowMeTop;
 bool ShowMeMin;
 int ShowMeMinNum;
-bool UseRaidColors;//Use colors from set raid colors for each class display. 
+bool UseRaidColors;//Use colors from set raid colors for each class display.
 bool LiveUpdate;//Update Total/DPS/Time/% as it happens instead of a set pulse.
 int ShowTotal;
 int FightIA;//Fight Inactive.
@@ -463,7 +463,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	int CheckUI = false;
 	//Tabs holder exists?
 	if (!(Tabs = (CTabWnd*)GetChildItem("DPS_Tabs"))) CheckUI = true;
-	
+
 	//DPS Settings Tab
 	if (!(CShowMeTop = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeTopBox"))) CheckUI = true;
 	if (!(CShowMeMin = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeMinBox"))) CheckUI = true;
@@ -480,12 +480,12 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	//DPS Tab
 	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
 	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
-	
-	
-	
-	
-	
-	
+
+
+
+
+
+
 	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
 
 	if (CheckUI) {
@@ -802,7 +802,7 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	
+
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
 		char szColumn[16] = { 0 };
@@ -847,11 +847,11 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	else strcpy_s(szName, szChar);
 	Saved = GetPrivateProfileBool(szName, "Saved", false, INIFileName);
 	if (Saved) {
-		SetLocation({ 
+		SetLocation({
 			GetPrivateProfileInt(szName, "Left", 0, INIFileName),
 			GetPrivateProfileInt(szName, "Top", 0, INIFileName),
 			GetPrivateProfileInt(szName, "Right", 0, INIFileName),
-			GetPrivateProfileInt(szName, "Bottom", 0, INIFileName) 
+			GetPrivateProfileInt(szName, "Bottom", 0, INIFileName)
 		});
 
 		SetAlpha((BYTE)GetPrivateProfileInt(szName, "Alpha", 0, INIFileName));
@@ -895,7 +895,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 			LTopList->SetColumnWidth(i, temp);
 		}
 	}
-	
+
 	if (FightIA < 3) FightIA = 8;
 	if (FightTO < 3) FightTO = 30;
 	if (EntTO < 3) EntTO = 8;
@@ -1447,21 +1447,21 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 
 		case 20://Color: 20 - You regain some experience from resurrection.
 
-		case 256://Color: 256 - Other player /say messages	
+		case 256://Color: 256 - Other player /say messages
 		case 257://Color: 257 - Other /tell's you
 		case 258://Color: 258 - Other tells /group
 		case 259://Color: 259 - Guild Chat - Incoming
 		case 260://Color: 260 - Other /ooc
 		case 261://Color: 261 - Other /auction
-		case 262://Color: 262 - Other /shout	
+		case 262://Color: 262 - Other /shout
 		case 263://Color: 263 - other Emote commands/eat food messages (/cry, Chomp, chomp, chomp... Soandso takes a bite...etc)
 		case 264://Color: 264 - You begin casting
 			break;
 		case 265://Color: 265 - You hit other (melee/melee crit)
 			HandleYouHitOther(Line);
 			break;
-		case 266://Color: 266 - Other hits you	
-		case 267://Color: 267 - You miss other	
+		case 266://Color: 266 - Other hits you
+		case 267://Color: 267 - You miss other
 		case 268://Color: 268 - Riposte/Dodge/Other Misses You
 		case 269://Color: 269 - Announcement (GM Events etc)
 		case 270://Color: 270 - You have become better at [Skill]! (Number)
@@ -1477,7 +1477,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		case 279://Color: 279 - Others Hits Other
 			HandleOtherHitOther(Line); //Other hits other
 			break;
-		case 280://Color: 280 - Other Misses Other	
+		case 280://Color: 280 - Other Misses Other
 		case 281://Color: 281 - /who
 		case 282://Color: 282 - Other /yell
 			break;
@@ -1486,9 +1486,9 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 			break;
 		case 284://Color: 284 - Spell wear off messages
 		case 285://Color: 285 - Coin collection/Split
-		case 286://Color: 286 - Loot Related (Master looter actions, you loot)	
-		case 287://Color: 287 - Dice Rolls	
-		case 288://Color: 288 - Other Starts Casting Messages	
+		case 286://Color: 286 - Loot Related (Master looter actions, you loot)
+		case 287://Color: 287 - Dice Rolls
+		case 288://Color: 288 - Other Starts Casting Messages
 		case 289://Color: 289 - Target is out of range, get closer/Interupt/Fizzle/other spell failure
 		case 290://Color: 290 - Channel Lists after logged in
 		case 291://Color: 291 - Chat Channel 1 - Incoming
@@ -1505,8 +1505,8 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		case 303://Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
 
 		case 306://Color: 306 - Enrage (Showed for pet)
-		case 307://Color: 307 - Your /say messages, mob advances messages.	
-		case 308://Color: 308 - You tell other.	
+		case 307://Color: 307 - Your /say messages, mob advances messages.
+		case 308://Color: 308 - You tell other.
 		case 309://Color: 309 - Group conversation
 		case 310://Color: 310 - Guild conversation - Outgoing
 		case 311://Color: 311 - you /ooc
@@ -1532,7 +1532,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		case 329://Color: 329 - Damage Shield hits you.
 		case 330://Color: 330 - Raid Role messages.
 
-		case 333://Color: 333 - Item Focus messages	
+		case 333://Color: 333 - Item Focus messages
 		case 334://Color: 334 - You gain Experience messages
 		case 335://Color: 335 - You have already finished collecting [Item].
 			break;
@@ -1541,10 +1541,10 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 			break;
 		case 337://Color: 337 - Pet messages (YourPet says, "Following you master.")
 
-		case 339://Color: 339 - Strike thru (yours and others)	
+		case 339://Color: 339 - Strike thru (yours and others)
 		case 340://Color: 340 - You are stunned/unstunned messages.
 
-		case 342://Color: 342 - fellowship messages	
+		case 342://Color: 342 - fellowship messages
 		case 343://Color: 343 - corpse emote
 
 		case 345://Color: 345 - Guild plants banner
@@ -1573,7 +1573,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		case 371://Color: 371 - Destroy item message
 
 		case 373://Color: 373 - Heal over time on other?
-		case 374://Color: 374 - You heal other	
+		case 374://Color: 374 - You heal other
 		case 375://Color: 375 - Other buffs other/Other Heal Other
 			break;
 		case 376://Color: 376 - Your DoT's
@@ -1589,7 +1589,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		case 380://Color: 380 - Your spell messages
 			break;
 		default:
-			//Don't Know these, lets see what it is. 
+			//Don't Know these, lets see what it is.
 			if (Debug) WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, Line);
 			break;
 		}
