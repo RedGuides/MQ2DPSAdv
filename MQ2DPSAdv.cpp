@@ -659,11 +659,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		sprintf_s(szTemp, "%i", LineNum - RankAdj + 1);
 		LTopList->SetItemText(LineNum, 0, szTemp);
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 0, szTemp);
-		sprintf_s(szTemp, "%s", Ent->Name);
-		if (gAnonymize) {
-			Anonymize(szTemp, 256, 2);
-		}
-		sprintf_s(szTemp, "%s%s%s", Ent->Mercenary ? "[M] " : "", szTemp, Ent->Pets ? "*" : "");
+		sprintf_s(szTemp, "%s%s%s", Ent->Mercenary ? "[M] " : "", Ent->Name, Ent->Pets ? "*" : "");
 		LTopList->SetItemText(LineNum, 1, szTemp);
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 1, szTemp);
 		//Total Damage
