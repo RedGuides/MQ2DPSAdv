@@ -7,11 +7,18 @@ PreSetup("MQ2DPSAdv");
 #include <vector>
 #include "MQ2DPSAdv.h"
 
-#define DPSVERSION "1.3.00"
+#define DPSVERSION "1.4.00"
 //#define DPSDEV
 
 /*
  ### UPDATE THIS IF YOU MAKE A CHANGE ###
+ == 03/03/2020  == 1.4.00 (Ctaylor22) Added DPS Meter logic for self and pet. Added a TLO so you can access the information.
+ This update does not require the DPSADV UI window to be open. Added mstart, mstop, mreset commands.
+ New TLO DPSAdv and members: MyDamage, PetDamage, TotalDamage, MyDPS, PetDPS, TotalDPS, TimeElapsed, MyStatus.
+  Following Members are string type and are formated with commas:
+  MyDamagef, PetDamagef, TotalDamagef, MyDPSf, PetDPSf, TotalDPSf
+  added several commands including help.
+
  == 10/20/19 == 1.3.00 (Chatwiththisname)
  Added comma delimited outputs, IE: 361,987,590 instead of 361987590 for the total dmg output.
  created two new functions. ReverseString(PCHAR szLine) and PutCommas(PCHAR szLine) to manipulate the strings.
@@ -131,6 +138,10 @@ void DPSMob::DPSEntry::Init() {
 	Damage.First = 0;
 	Damage.Last = 0;
 	Damage.AddTime = 0;
+	// Added for Current Character DPS.
+	//MyTotal = 0;
+	//MyPetTotal = 0;
+	//MyActive = false;
 }
 
 void DPSMob::DPSEntry::GetSpawn() {
@@ -350,11 +361,6 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
 	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
 	
-	
-	
-	
-	
-	
 	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
 
 	if (CheckUI) {
@@ -453,6 +459,16 @@ void PutCommas(PCHAR szLine) {
 	}
 	sprintf_s(szLine, MAX_STRING, temp);
 	ReverseString(szLine);
+}
+
+void InsertCommas(PCHAR szLine) {
+	std::string numWithCommas = szLine;
+	int insertPosition = numWithCommas.length() - 3;
+	while (insertPosition > 0) {
+		numWithCommas.insert(insertPosition, ",");
+		insertPosition -= 3;
+	}
+	sprintf_s(szLine, MAX_STRING, numWithCommas.c_str());
 }
 
 void MakeItTBMK(PCHAR szLine) {
@@ -1107,6 +1123,47 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 	return true;
 }
 
+void AddMyDamage(char EntName[256], int aDamage) {
+	//if Me Do this
+	unsigned long bMyTotal = MyTotal;
+	unsigned long bMyPetTotal = MyPetTotal;
+	flag1 = 0;
+	if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
+		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
+		if (!MyFirst) MyFirst = (int)time(NULL);
+		MyLast = (int)time(NULL);
+		MyTotal += aDamage;
+		flag1 = 1;
+	}
+	// Is it one of my extra pets?
+	else if (strstr(EntName, "`s pet") && strstr(EntName, MyName)) {
+		if (MyDebug) WriteChatf("[AddMyDamage] 2 -%s-", EntName);
+		if (!MyFirst) MyFirst = (int)time(NULL);
+		MyLast = (int)time(NULL);
+		MyPetTotal += aDamage;
+		flag1 = 2;
+	}
+	// If I have a pet is it my pet
+	else {
+		PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+		if (pSpawn && pSpawn->PetID != 0xFFFFFFFF) {
+			int dPetID = pSpawn->PetID;
+			if (MyDebug) WriteChatf("[AddMyDamage] 3 -%s- -%s- %i", EntName, MyName, dPetID ? dPetID : 0);
+			if (PSPAWNINFO dPet = (PSPAWNINFO)GetSpawnByID(dPetID)) {
+				if (MyDebug) WriteChatf("[AddMyDamage] 4 -%s-", dPet->DisplayedName);
+				if (!_stricmp(dPet->DisplayedName, EntName)) {
+					if (MyDebug) WriteChatf("[AddMyDamage] 5 %i", aDamage);
+					if (!MyFirst) MyFirst = (int)time(NULL);
+					MyLast = (int)time(NULL);
+					MyPetTotal += aDamage;
+					flag1 = 3;
+				}
+			}
+		}
+	}
+	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %lu A: %lu  Pet B: %lu A: %lu Flag: %i", EntName, aDamage, bMyTotal, MyTotal, bMyPetTotal, MyPetTotal, flag1);
+}
+
 void HandleNonMelee(PCHAR Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
@@ -1114,7 +1171,8 @@ void HandleNonMelee(PCHAR Line) {
 	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[HandleNonMelee] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleDOT(PCHAR Line) {
@@ -1124,7 +1182,8 @@ void HandleDOT(PCHAR Line) {
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[HandleDot] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleOtherHitOther(PCHAR Line) {
@@ -1133,11 +1192,14 @@ void HandleOtherHitOther(PCHAR Line) {
 	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[OtherHitOther] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	if (DPSMob* mob = GetMob(MobName, true, true)) {
-		if (DPSMob::DPSEntry* entry = mob->GetEntry(EntName)) {
-			entry->AddDamage(Damage);
+	if (Active) {
+		if (DPSMob* mob = GetMob(MobName, true, true)) {
+			if (DPSMob::DPSEntry* entry = mob->GetEntry(EntName)) {
+				entry->AddDamage(Damage);
+			}
 		}
 	}
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleYouHitOther(PCHAR Line) {
@@ -1147,11 +1209,14 @@ void HandleYouHitOther(PCHAR Line) {
 		return;
 	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
 	if (pCharSpawn) {
-		if (DPSMob* mob = GetMob(MobName, true, true)) {
-			if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
-				entry->AddDamage(Damage);
+		if (Active) {
+			if (DPSMob* mob = GetMob(MobName, true, true)) {
+				if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+					entry->AddDamage(Damage);
+				}
 			}
 		}
+		if (MyActive) AddMyDamage(MyName, Damage);
 	}
 }
 
@@ -1159,12 +1224,15 @@ void HandleDeath(PCHAR Line) {
 	char MobName[256] = { 0 };
 	if (!SplitStringDeath(Line, MobName)) return;
 	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
-	if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
-		HandleDeath(DeadMob);
-		if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
-			DPSWnd->DrawCombo();
+	if (Active) {
+		if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
+			HandleDeath(DeadMob);
+			if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
+				DPSWnd->DrawCombo();
+			}
 		}
 	}
+	if (MyActive) MyActive = false;
 }
 
 void HandleDeath(DPSMob* DeadMob) {
@@ -1224,7 +1292,86 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		Debug = Debug ? false : true;
 		WriteChatf("Debug is now: %s", Debug ? "\agOn" : "\arOff");
 	}
+	else if (!_stricmp(Arg1, "MyDebug")) {
+		MyDebug = MyDebug ? false : true;
+		WriteChatf("MyDebug is now: %s", MyDebug ? "\agOn" : "\arOff");
+	}
+	else if (!_stricmp(Arg1, "mstart")) {
+		MyFirst = 0;
+		MyLast = 0;
+		MyTime = 0;
+		MyTotal = 0;
+		MyPetTotal = 0;
+		MyDPSValue = 0;
+		MyPetDPS = 0;
+		TotalDPSValue = 0;
+		MyActive = true;
+	}
+	else if (!_stricmp(Arg1, "mstop")) {
+		if (MyActive) {
+			MyLast = time(NULL);
+			MyActive = false;
+			MyTime = (MyLast - MyFirst);
+			MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
+			MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
+			TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+		}
+	}
+	else if (!_stricmp(Arg1, "mreset")) {
+		MyActive = false;
+		MyFirst = 0;
+		MyLast = 0;
+		MyTime = 0;
+		MyTotal = 0;
+		MyPetTotal = 0;
+		MyDPSValue = 0;
+		MyPetDPS = 0;
+		TotalDPSValue = 0;
+	}
+	else if (!_stricmp(Arg1, "tlo")) {
+		DisplayHelp("tlo");
+	}
+	else if (!_stricmp(Arg1, "help")) {
+		DisplayHelp("dps");
+	}
+	else {
+		DisplayHelp("dps");
+	}
 	CheckActive();
+}
+
+void DisplayHelp(PCHAR hTemp) {
+	if (!_stricmp(hTemp, "dps")) {
+		WriteChatf("[DPSAdv] - Valid Commands are:");
+		WriteChatf("[DPSAdv]     show - Opens DPSAdv Window.");
+		WriteChatf("[DPSAdv]     colors - switch to Raid tab in Window.");
+		WriteChatf("[DPSAdv]     reload - reload your ini settings.");
+		WriteChatf("[DPSAdv]     save - Save your current settings to ini.");
+		WriteChatf("[DPSAdv]     listsize - displays the number of mobs in the DPS list.");
+		WriteChatf("[DPSAdv]     copy - Copy the DPS window.");
+		WriteChatf("[DPSAdv]     debug - Toggles on/off debug messages.");
+		WriteChatf("[DPSAdv]     mydebug - Toggles on/off myDPS debug messages");
+		WriteChatf("[DPSAdv]     mstart - Starts My DPS capture process.");
+		WriteChatf("[DPSAdv]     mstop - Stops my DPS capture process");
+		WriteChatf("[DPSAdv]     mreset - Truns off my DPS capture and set myDPS totals to zero.");
+		WriteChatf("[DPSAdv]     tlo - get a list of the DPSAdv TLO members.");
+	}
+	else if (!_stricmp(hTemp, "tlo")) {
+		WriteChatf("[DPSAdv] - DPSAdv TLO Members:");
+		WriteChatf("[DPSAdv]    MyDamage - My Damage as a number");
+		WriteChatf("[DPSAdv]    PetDamage - My pet Damage as a number");
+		WriteChatf("[DPSAdv]    TotalDamage - My Damage and Pet Damage together as a number");
+		WriteChatf("[DPSAdv]    MyDPS - My DPS as a number");
+		WriteChatf("[DPSAdv]    PetDPS - My pet DPS as a number");
+		WriteChatf("[DPSAdv]    TotalDPS - My DPS and pet DPS together as a number");
+		WriteChatf("[DPSAdv]    TimeElapsed - Number in seconds of time of fight");
+		WriteChatf("[DPSAdv]    MyDamagef - My Damage formated with commas as a string.");
+		WriteChatf("[DPSAdv]    PetDamagef - My pet Damage formated with commas as a string.");
+		WriteChatf("[DPSAdv]    TotalDamagef - My Damage and Pet Damage together formated with commas as a string.");
+		WriteChatf("[DPSAdv]    MyDPSf - My DPS formated with commas as a string.");
+		WriteChatf("[DPSAdv]    PetDPSf - My pet DPS formated with commas as a string.");
+		WriteChatf("[DPSAdv]    TotalDPSf - My DPS and pet DPS formated with commas as a string.");
+	}
 }
 
 void CreateDPSWindow() {
@@ -1260,6 +1407,274 @@ PLUGIN_API VOID SetGameState(DWORD GameState) {
 PLUGIN_API VOID OnCleanUI(VOID) { DestroyDPSWindow(); }
 PLUGIN_API VOID OnReloadUI(VOID) { if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow(); }
 
+// ***********************************************************************************************************
+// Adding TLO for DPS Meter
+// ***********************************************************************************************************
+
+class MQ2DPSAdvType *pDpsAdvType = 0;
+
+class MQ2DPSAdvType : public MQ2Type
+{
+private:
+    char Temps[MAX_STRING];
+	bool addComma = false;
+public:
+	enum DpsAdvMembers {
+		MyDamagef = 1,
+		MyDamage = 2,
+		PetDamagef = 3,
+		PetDamage = 4,
+		TotalDamagef = 5,
+		TotalDamage = 6,
+		MyDPSf = 7,
+		MyDPS = 8,
+		PetDPSf = 9,
+		PetDPS = 10,
+		TotalDPSf = 11,
+		TotalDPS = 12,
+		TimeElapsed = 13,
+		MyStatus = 14,
+		MyPetID = 15
+	};
+
+	MQ2DPSAdvType() :MQ2Type("DPSAdv")
+	{
+		TypeMember(MyDamagef);
+		TypeMember(MyDamage);
+		TypeMember(PetDamagef);
+		TypeMember(PetDamage);
+		TypeMember(TotalDamagef);
+		TypeMember(TotalDamage);
+		TypeMember(MyDPSf);
+		TypeMember(MyDPS);
+		TypeMember(PetDPSf);
+		TypeMember(PetDPS);
+		TypeMember(TotalDPSf);
+		TypeMember(TotalDPS);
+		TypeMember(TimeElapsed);
+		TypeMember(MyStatus);
+		TypeMember(MyPetID);
+	}
+
+	~MQ2DPSAdvType()
+	{
+	}
+
+	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR &Dest)
+	{
+		PMQ2TYPEMEMBER pMember = MQ2DPSAdvType::FindMember(Member);
+		if (!pMember)
+			return false;
+		addComma = false;
+		switch ((DpsAdvMembers)pMember->ID)
+		{
+		case MyDamagef:
+			if (MyTotal > 999) {
+				sprintf_s(Temps, "%lu", MyTotal);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+				return true;
+			}
+		case MyDamage:
+ 		    Dest.Int64 = MyTotal;
+			Dest.Type = pInt64Type;
+			return true;
+		case PetDamagef:
+			if (MyPetTotal > 999) {
+				sprintf_s(Temps, "%lu", MyPetTotal);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+				return true;
+			}
+		case PetDamage:
+			Dest.Int64 = MyPetTotal;
+			Dest.Type = pInt64Type;
+			return true;
+		case TotalDamagef:
+			if (MyTotal + MyPetTotal > 999) {
+				sprintf_s(Temps, "%lu", MyTotal + MyPetTotal);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+				return true;
+			}
+		case TotalDamage:
+			Dest.Int64 = MyTotal + MyPetTotal;
+			Dest.Type = pInt64Type;
+			return true;
+		case MyDPSf:
+			addComma = true;
+		case MyDPS:
+			if (MyActive) {
+				if (MyTotal > 0 && MyFirst > 0) {
+					MyTime = time(NULL) - MyFirst;
+					MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
+				}
+				else {
+					MyTime = 0;
+					MyDPSValue = 0;
+				}
+			}
+			else {
+				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
+				}
+				else {
+					MyTime = 0;
+					MyDPSValue = 0;
+				}
+
+			}
+			if (addComma && MyDPSValue > 999) {
+				sprintf_s(Temps, "%I32u", MyDPSValue);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+			}
+			else {
+				Dest.Int = MyDPSValue;
+				Dest.Type = pIntType;
+			}
+			return true;
+		case PetDPSf:
+			addComma = true;
+		case PetDPS:
+			if (MyActive) {
+				if (MyPetTotal > 0 && MyFirst > 0) {
+					MyTime = time(NULL) - MyFirst;
+					MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					MyPetDPS = 0;
+				}
+			}
+			else {
+				if (MyPetTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					MyPetDPS = 0;
+				}
+			}
+			if (addComma && MyPetDPS > 999) {
+				sprintf_s(Temps, "%I32u", MyPetDPS);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+			}
+			else {
+				Dest.Int = MyPetDPS;
+				Dest.Type = pIntType;
+			}
+			return true;
+		case TotalDPSf:
+			addComma = true;
+		case TotalDPS:
+			if (MyActive) {
+				if (MyTotal > 0 && MyFirst > 0) {
+					MyTime = time(NULL) - MyFirst;
+					TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+				}
+				else {
+					MyTime = 0;
+					TotalDPSValue = 0;
+				}
+			}
+			else {
+				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+				}
+				else {
+					MyTime = 0;
+					TotalDPSValue = 0;
+				}
+			}
+			if (addComma && TotalDPSValue > 999) {
+				sprintf_s(Temps, "%I32u", TotalDPSValue);
+				InsertCommas(Temps);
+				Dest.Ptr = Temps;
+				Dest.Type = pStringType;
+			}
+			else {
+				Dest.Int = TotalDPSValue;
+				Dest.Type = pIntType;
+			}
+			return true;
+		case TimeElapsed:
+			if (MyActive) {
+				if (MyFirst) {
+					MyTime = time(NULL) - MyFirst;
+				}
+				else {
+					MyTime = 0;
+				}
+			}
+			else if (MyFirst & MyLast) {
+				MyTime = MyLast - MyFirst;
+			}
+			else {
+				MyTime = 0;
+			}
+			Dest.Int = (int)MyTime;
+			Dest.Type = pIntType;
+			return true;
+		case MyStatus:
+			if (MyActive) {
+				Dest.Int = 1;
+			}
+			else {
+				Dest.Int = 0;
+			}
+			Dest.Type = pIntType;
+
+			return true;
+		case MyPetID:
+			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+			if (pSpawn && pSpawn->PetID != 0xFFFFFFFF)
+			{
+				Dest.Int = pSpawn->PetID;
+				Dest.Type = pIntType;
+				return true;
+			}
+			else {
+				Dest.Int = 0;
+				Dest.Type = pIntType;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ToString(MQ2VARPTR VarPtr, PCHAR Destination)
+	{
+		strcpy_s(Destination, MAX_STRING, Active ? "TRUE" : "FALSE");
+		return true;
+	}
+
+	bool FromData(MQ2VARPTR &VarPtr, MQ2TYPEVAR &Source)
+	{
+		return false;
+	}
+	bool FromString(MQ2VARPTR &VarPtr, PCHAR Source)
+	{
+		return false;
+	}
+};
+
+BOOL dataDPSAdv(PCHAR szName, MQ2TYPEVAR &Dest)
+{
+	Dest.DWord = 1;
+	Dest.Type = pDpsAdvType;
+	return true;
+}
+
 PLUGIN_API VOID InitializePlugin(VOID) {
 	LastMob = 0;
 	CurTarget = 0;
@@ -1274,9 +1689,16 @@ PLUGIN_API VOID InitializePlugin(VOID) {
 #ifdef DPSDEV
 	AddCommand("/dpstest", DPSTestCmd);
 #endif
+    // additions for DPS Meter
+	pDpsAdvType = new MQ2DPSAdvType;
+	AddMQ2Data("DPSAdv", dataDPSAdv);
+	// Additions End
 	CheckActive();
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
 	else CreateDPSWindow();
+	PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+	if (pSpawn) strcpy_s(MyName, pSpawn->DisplayedName);
+	MyActive = 0;
 }
 
 PLUGIN_API VOID ShutdownPlugin(VOID) {
@@ -1285,13 +1707,16 @@ PLUGIN_API VOID ShutdownPlugin(VOID) {
 #ifdef DPSDEV
 	RemoveCommand("/dpstest");
 #endif
+	// additions for DPS Meter
+	RemoveMQ2Data("DPSAdv");
+	delete pDpsAdvType;
+	// Additions End
 }
-
 
 
 PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
-	if (Active) {
+	if (Active || MyActive) {
 		if (Debug) {
 			char buffer[MAX_STRING] = { 0 };
 			sprintf_s(buffer, Line);
@@ -1422,7 +1847,7 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 334://Color: 334 - You gain Experience messages
 		case 335://Color: 335 - You have already finished collecting [Item].
 			break;
-		case 336://Color: 336 - Pet Non-Melee/Pet beings to cast
+		case 336://Color: 336 - Pet Non-Melee/Pet begins to cast
 			HandleNonMelee(Line); //All pet non-melee (yours and others)
 			break;
 		case 337://Color: 337 - Pet messages (YourPet says, "Following you master.")
@@ -1601,3 +2026,4 @@ PLUGIN_API VOID OnEndZone(VOID) {
 	Zoning = false;
 	CheckActive();
 }
+
