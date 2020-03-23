@@ -60,6 +60,9 @@
   <ItemGroup>
     <Xml Include="MQUI_DPSAdvWnd.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="README.MD" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
