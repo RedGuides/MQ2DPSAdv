@@ -357,16 +357,6 @@ void PutCommas(PCHAR szLine) {
 	ReverseString(szLine);
 }
 
-void InsertCommas(PCHAR szLine) {
-	std::string numWithCommas = szLine;
-	int insertPosition = numWithCommas.length() - 3;
-	while (insertPosition > 0) {
-		numWithCommas.insert(insertPosition, ",");
-		insertPosition -= 3;
-	}
-	sprintf_s(szLine, MAX_STRING, numWithCommas.c_str());
-}
-
 void MakeItTBMK(PCHAR szLine) {
 	unsigned long long value = _atoi64(szLine);
 	if (value >= 1000000000000) {
@@ -1367,7 +1357,7 @@ public:
 		case MyDamagef:
 			if (MyTotal > 999) {
 				sprintf_s(Temps, "%lu", MyTotal);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 				return true;
@@ -1379,7 +1369,7 @@ public:
 		case PetDamagef:
 			if (MyPetTotal > 999) {
 				sprintf_s(Temps, "%lu", MyPetTotal);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 				return true;
@@ -1391,7 +1381,7 @@ public:
 		case TotalDamagef:
 			if (MyTotal + MyPetTotal > 999) {
 				sprintf_s(Temps, "%lu", MyTotal + MyPetTotal);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 				return true;
@@ -1426,7 +1416,7 @@ public:
 			}
 			if (addComma && MyDPSValue > 999) {
 				sprintf_s(Temps, "%I32u", MyDPSValue);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 			}
@@ -1460,7 +1450,7 @@ public:
 			}
 			if (addComma && MyPetDPS > 999) {
 				sprintf_s(Temps, "%I32u", MyPetDPS);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 			}
@@ -1494,7 +1484,7 @@ public:
 			}
 			if (addComma && TotalDPSValue > 999) {
 				sprintf_s(Temps, "%I32u", TotalDPSValue);
-				InsertCommas(Temps);
+				PutCommas(Temps);
 				Dest.Ptr = Temps;
 				Dest.Type = pStringType;
 			}
