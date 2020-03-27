@@ -1014,20 +1014,19 @@ void AddMyDamage(char EntName[256], int Damage1) {
 	unsigned int MyTotalBefore = MyTotal;
 	unsigned int MyPetTotalBefore = MyPetTotal;
 	flag1 = 0;
-	if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
+	if ((!_stricmp(MyName, EntName) || !_stricmp(EntName, "You"))
+		|| (strstr(EntName, "`s pet") && strstr(EntName, MyName))) {
 		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
 		if (!MyFirst) MyFirst = (int)time(nullptr);
 		MyLast = (int)time(nullptr);
-		MyTotal += Damage1;
-		flag1 = 1;
-	}
-	// Is it one of my extra pets?
-	else if (strstr(EntName, "`s pet") && strstr(EntName, MyName)) {
-		if (MyDebug) WriteChatf("[AddMyDamage] 2 -%s-", EntName);
-		if (!MyFirst) MyFirst = (int)time(nullptr);
-		MyLast = (int)time(nullptr);
-		MyPetTotal += Damage1;
-		flag1 = 2;
+		if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
+			MyTotal += Damage1;
+			flag1 = 1;
+		}
+		else {
+			MyPetTotal += Damage1;
+			flag1 = 2;
+		}
 	}
 	// If I have a pet is it my pet
 	else {
