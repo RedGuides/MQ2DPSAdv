@@ -72,11 +72,11 @@ unsigned int TotalDPSValue;
 bool MyActive; // This is to turn on and off the DPS accumlator for just yourself.
 time_t MyFirst;
 time_t MyLast;
-unsigned long long MyTime;
+uint64_t MyTime;
 int flag1;
 
 struct EntDamage {
-	unsigned long long Total;
+	uint64_t Total;
 	time_t First;
 	time_t Last;
 	int AddTime;
@@ -105,7 +105,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine);
 void ReverseString(PCHAR szLine);
 void PutCommas(PCHAR szLine);
 void MakeItTBMK(PCHAR szLine);
-void AddMyDamage(int aDamage);
+void AddMyDamage(int Damage1);
 void DisplayHelp(PCHAR hTemp);
 #ifdef DPSDEV
 void         DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine);
@@ -131,9 +131,9 @@ public:
 		DPSEntry();
 		DPSEntry(char EntName[64], DPSMob* pParent);
 		void Init();
-		void AddDamage(int aDamage);
-		unsigned long long GetDPS();
-		unsigned long long GetSDPS();
+		void AddDamage(int Damage1);
+		uint64_t GetDPS();
+		uint64_t GetSDPS();
 		void Sort();
 		void GetSpawn();
 		bool CheckMaster();
@@ -155,7 +155,7 @@ public:
 	DPSMob();
 	DPSMob::DPSMob(PCHAR MobName, size_t MobLen);
 	void Init();
-	void AddDamage(int aDamage);
+	void AddDamage(int Damage1);
 	void GetSpawn();
 	bool IsPet();
 	DPSEntry* GetEntry(char EntName[64], bool Create = true);

@@ -85,25 +85,25 @@ bool DPSMob::DPSEntry::CheckMaster() {
 	return false;
 }
 
-void DPSMob::DPSEntry::AddDamage(int aDamage) {
+void DPSMob::DPSEntry::AddDamage(int Damage1) {
 	if (CheckMaster()) {
 		Master->Pets = true;
-		Master->AddDamage(aDamage);
+		Master->AddDamage(Damage1);
 		DoSort = true;
 		return;
 	}
 	DoSort = true;
-	if (Damage.First && (time(NULL) - Damage.Last >= EntTO)) {
+	if (Damage.First && (time(nullptr) - Damage.Last >= EntTO)) {
 		Damage.AddTime += (int)(Damage.Last - Damage.First) + 1;
 		Damage.First = 0;
 	}
-	Damage.Total += aDamage;
-	Damage.Last = time(NULL);
-	if (!Damage.First) Damage.First = time(NULL);
-	Parent->AddDamage(aDamage);
+	Damage.Total += Damage1;
+	Damage.Last = time(nullptr);
+	if (!Damage.First) Damage.First = time(nullptr);
+	Parent->AddDamage(Damage1);
 }
 
-unsigned long long DPSMob::DPSEntry::GetDPS() {
+uint64_t DPSMob::DPSEntry::GetDPS() {
 	//Damage.Total is:		475082
 	//Damage.Last is:		1580130211
 	//Damage.First is:		1580130212
@@ -117,7 +117,7 @@ unsigned long long DPSMob::DPSEntry::GetDPS() {
 	return (int64_t)(Damage.Total / dividetotal);
 }
 
-unsigned long long DPSMob::DPSEntry::GetSDPS() {
+uint64_t DPSMob::DPSEntry::GetSDPS() {
 	auto val = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
 	if (val == 0)
 		return 0;
@@ -198,10 +198,10 @@ bool DPSMob::IsPet() {
 	return PetName || (Spawn && Spawn->MasterID > 0);
 }
 
-void DPSMob::AddDamage(int aDamage) {
-	Damage.Total += aDamage;
-	Damage.Last = time(NULL);
-	if (!Damage.First) Damage.First = time(NULL);
+void DPSMob::AddDamage(int Damage1) {
+	Damage.Total += Damage1;
+	Damage.Last = time(nullptr);
+	if (!Damage.First) Damage.First = time(nullptr);
 	if (!Active) {
 		Active = true;
 		sprintf_s(Tag, "[A] ");
@@ -358,7 +358,7 @@ void PutCommas(PCHAR szLine) {
 }
 
 void MakeItTBMK(PCHAR szLine) {
-	unsigned long long value = _atoi64(szLine);
+	uint64_t value = _atoi64(szLine);
 	if (value >= 1000000000000) {
 		value = value / 100000000000;
 		_i64toa_s(value, szLine, MAX_STRING, 10);
@@ -1009,45 +1009,45 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 	return true;
 }
 
-void AddMyDamage(char EntName[256], int aDamage) {
+void AddMyDamage(char EntName[256], int Damage1) {
 	//if Me Do this
-	unsigned long bMyTotal = MyTotal;
-	unsigned long bMyPetTotal = MyPetTotal;
+	unsigned int MyTotalBefore = MyTotal;
+	unsigned int MyPetTotalBefore = MyPetTotal;
 	flag1 = 0;
 	if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
 		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
-		if (!MyFirst) MyFirst = (int)time(NULL);
-		MyLast = (int)time(NULL);
-		MyTotal += aDamage;
+		if (!MyFirst) MyFirst = (int)time(nullptr);
+		MyLast = (int)time(nullptr);
+		MyTotal += Damage1;
 		flag1 = 1;
 	}
 	// Is it one of my extra pets?
 	else if (strstr(EntName, "`s pet") && strstr(EntName, MyName)) {
 		if (MyDebug) WriteChatf("[AddMyDamage] 2 -%s-", EntName);
-		if (!MyFirst) MyFirst = (int)time(NULL);
-		MyLast = (int)time(NULL);
-		MyPetTotal += aDamage;
+		if (!MyFirst) MyFirst = (int)time(nullptr);
+		MyLast = (int)time(nullptr);
+		MyPetTotal += Damage1;
 		flag1 = 2;
 	}
 	// If I have a pet is it my pet
 	else {
 		PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-		if (pSpawn && pSpawn->PetID != 0xFFFFFFFF) {
-			int dPetID = pSpawn->PetID;
-			if (MyDebug) WriteChatf("[AddMyDamage] 3 -%s- -%s- %i", EntName, MyName, dPetID ? dPetID : 0);
-			if (PSPAWNINFO dPet = (PSPAWNINFO)GetSpawnByID(dPetID)) {
+		if (pSpawn && pSpawn->PetID != -1) {
+			int iPetID = pSpawn->PetID;
+			if (MyDebug) WriteChatf("[AddMyDamage] 3 -%s- -%s- %i", EntName, MyName, iPetID);
+			if (PSPAWNINFO dPet = (PSPAWNINFO)GetSpawnByID(iPetID)) {
 				if (MyDebug) WriteChatf("[AddMyDamage] 4 -%s-", dPet->DisplayedName);
 				if (!_stricmp(dPet->DisplayedName, EntName)) {
-					if (MyDebug) WriteChatf("[AddMyDamage] 5 %i", aDamage);
-					if (!MyFirst) MyFirst = (int)time(NULL);
-					MyLast = (int)time(NULL);
-					MyPetTotal += aDamage;
+					if (MyDebug) WriteChatf("[AddMyDamage] 5 %i", Damage1);
+					if (!MyFirst) MyFirst = (int)time(nullptr);
+					MyLast = (int)time(nullptr);
+					MyPetTotal += Damage1;
 					flag1 = 3;
 				}
 			}
 		}
 	}
-	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %lu A: %lu  Pet B: %lu A: %lu Flag: %i", EntName, aDamage, bMyTotal, MyTotal, bMyPetTotal, MyPetTotal, flag1);
+	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %lu A: %lu  Pet B: %lu A: %lu Flag: %i", EntName, Damage1, MyTotalBefore, MyTotal, MyPetTotalBefore, MyPetTotal, flag1);
 }
 
 void HandleNonMelee(PCHAR Line) {
@@ -1195,7 +1195,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	}
 	else if (!_stricmp(Arg1, "mstop")) {
 		if (MyActive) {
-			MyLast = time(NULL);
+			MyLast = time(nullptr);
 			MyActive = false;
 			MyTime = (MyLast - MyFirst);
 			MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
@@ -1395,7 +1395,7 @@ public:
 		case MyDPS:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
-					MyTime = time(NULL) - MyFirst;
+					MyTime = time(nullptr) - MyFirst;
 					MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
 				}
 				else {
@@ -1430,7 +1430,7 @@ public:
 		case PetDPS:
 			if (MyActive) {
 				if (MyPetTotal > 0 && MyFirst > 0) {
-					MyTime = time(NULL) - MyFirst;
+					MyTime = time(nullptr) - MyFirst;
 					MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
 				}
 				else {
@@ -1464,7 +1464,7 @@ public:
 		case TotalDPS:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
-					MyTime = time(NULL) - MyFirst;
+					MyTime = time(nullptr) - MyFirst;
 					TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
 				}
 				else {
@@ -1496,7 +1496,7 @@ public:
 		case TimeElapsed:
 			if (MyActive) {
 				if (MyFirst) {
-					MyTime = time(NULL) - MyFirst;
+					MyTime = time(nullptr) - MyFirst;
 				}
 				else {
 					MyTime = 0;
@@ -1523,7 +1523,7 @@ public:
 			return true;
 		case MyPetID:
 			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-			if (pSpawn && pSpawn->PetID != 0xFFFFFFFF)
+			if (pSpawn && pSpawn->PetID != -1)
 			{
 				Dest.Int = pSpawn->PetID;
 				Dest.Type = pIntType;
@@ -1795,9 +1795,9 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 }
 
 bool CheckInterval() {
-	if (!Intervals) Intervals = time(NULL);
-	else if (Intervals != time(NULL)) {
-		Intervals = time(NULL);
+	if (!Intervals) Intervals = time(nullptr);
+	else if (Intervals != time(nullptr)) {
+		Intervals = time(nullptr);
 		return true;
 	}
 	return false;
@@ -1833,16 +1833,16 @@ void IntPulse() {
 			i--;
 		}
 		else {
-			if (Mob->Active && !Mob->Dead && time(NULL) - Mob->Damage.Last > FightTO) {
+			if (Mob->Active && !Mob->Dead && time(nullptr) - Mob->Damage.Last > FightTO) {
 				HandleDeath(Mob);
 				CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(NULL) - Mob->Damage.Last > FightIA) {
+			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(nullptr) - Mob->Damage.Last > FightIA) {
 				Mob->InActive = true;
 				sprintf_s(Mob->Tag, "[IA] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(NULL) - Mob->Damage.Last < FightIA) {
+			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(nullptr) - Mob->Damage.Last < FightIA) {
 				Mob->InActive = false;
 				sprintf_s(Mob->Tag, "[A] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
