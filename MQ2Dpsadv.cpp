@@ -1011,8 +1011,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 
 void AddMyDamage(char EntName[256], int Damage1) {
 	//if Me Do this
-	unsigned int MyTotalBefore = MyTotal;
-	unsigned int MyPetTotalBefore = MyPetTotal;
+	uint64_t MyTotalBefore = MyTotal;
+	uint64_t MyPetTotalBefore = MyPetTotal;
 	flag1 = 0;
 	if ((!_stricmp(MyName, EntName) || !_stricmp(EntName, "You"))
 		|| (strstr(EntName, "`s pet") && strstr(EntName, MyName))) {
@@ -1267,7 +1267,7 @@ void CreateDPSWindow() {
 			((CXWnd*)DPSWnd)->Show(1, 1);
 		}
 		char szTitle[MAX_STRING];
-		sprintf_s(szTitle, "DPS Advanced");
+		sprintf_s(szTitle, "DPS Advanced %.1f", MQ2Version);
 		DPSWnd->CSetWindowText(szTitle);
 	}
 	CheckActive();
@@ -1301,8 +1301,8 @@ class MQ2DPSAdvType *pDpsAdvType = 0;
 class MQ2DPSAdvType : public MQ2Type
 {
 private:
-    char Temps[MAX_STRING];
-	bool addComma = false;
+	char Temps[MAX_STRING];
+bool addComma = false;
 public:
 	enum DpsAdvMembers {
 		MyDamagef = 1,
