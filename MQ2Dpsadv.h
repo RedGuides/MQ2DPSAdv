@@ -62,18 +62,20 @@ int FightIA;//Fight Inactive.
 int FightTO;//Fight Timeout.
 int EntTO;//Entity Timeout.
 bool UseTBMKOutputs = false;//Intended to show 1.4t, 1.5m, 343k etc outputs for total and DPS.
+
+//----------------------------------------------------------------------------
 // new below here for current character DPS totals, this does NOT show up in the DPS Window.
 char MyName[64];
 unsigned int MyTotal;
 unsigned int MyPetTotal;
-unsigned int MyDPSValue;
-unsigned int MyPetDPS;
-unsigned int TotalDPSValue;
+float MyDPSValue;
+float MyPetDPS;
+float TotalDPSValue;
 bool MyActive; // This is to turn on and off the DPS accumlator for just yourself.
 time_t MyFirst;
 time_t MyLast;
 uint64_t MyTime;
-int flag1;
+//----------------------------------------------------------------------------
 
 struct EntDamage {
 	uint64_t Total;
@@ -105,7 +107,6 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine);
 void ReverseString(PCHAR szLine);
 void PutCommas(PCHAR szLine);
 void MakeItTBMK(PCHAR szLine);
-void AddMyDamage(int Damage1);
 void DisplayHelp(PCHAR hTemp);
 #ifdef DPSDEV
 void         DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine);
@@ -201,4 +202,4 @@ public:
 	void SaveSetting(PCHAR Key, PCHAR Value, ...);
 
 };
-CDPSAdvWnd* DPSWnd = 0;
+CDPSAdvWnd* DPSWnd = nullptr;

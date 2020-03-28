@@ -1009,11 +1009,11 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR
 	return true;
 }
 
-void AddMyDamage(char EntName[256], int Damage1) {
+void AddMyDamage(char* EntName, int Damage1) {
 	//if Me Do this
 	uint64_t MyTotalBefore = MyTotal;
 	uint64_t MyPetTotalBefore = MyPetTotal;
-	flag1 = 0;
+	int flag1 = 0;
 	if ((!_stricmp(MyName, EntName) || !_stricmp(EntName, "You"))
 		|| (strstr(EntName, "`s pet") && strstr(EntName, MyName))) {
 		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
@@ -1346,7 +1346,7 @@ public:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
 					MyTime = time(nullptr) - MyFirst;
-					MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
+					MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1356,7 +1356,7 @@ public:
 			else {
 				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
 					MyTime = MyLast - MyFirst;
-					MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
+					MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1365,15 +1365,15 @@ public:
 
 			}
 
-			Dest.Int = MyDPSValue;
-			Dest.Type = pIntType;
+			Dest.Float = MyDPSValue;
+			Dest.Type = pFloatType;
 			return true;
 
 		case PetDPS:
 			if (MyActive) {
 				if (MyPetTotal > 0 && MyFirst > 0) {
 					MyTime = time(nullptr) - MyFirst;
-					MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
+					MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1383,7 +1383,7 @@ public:
 			else {
 				if (MyPetTotal > 0 && MyFirst > 0 && MyLast > 0) {
 					MyTime = MyLast - MyFirst;
-					MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
+					MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1399,7 +1399,7 @@ public:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
 					MyTime = time(nullptr) - MyFirst;
-					TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+					TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1409,7 +1409,7 @@ public:
 			else {
 				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
 					MyTime = MyLast - MyFirst;
-					TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+					TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
 				}
 				else {
 					MyTime = 0;
@@ -1417,9 +1417,10 @@ public:
 				}
 			}
 
-			Dest.Int = TotalDPSValue;
-			Dest.Type = pIntType;
+			Dest.Float = TotalDPSValue;
+			Dest.Type = pFloatType;
 			return true;
+
 		case TimeElapsed:
 			if (MyActive) {
 				if (MyFirst) {
@@ -1435,9 +1436,10 @@ public:
 			else {
 				MyTime = 0;
 			}
-			Dest.Int = (int)MyTime;
-			Dest.Type = pIntType;
+			Dest.UInt64 = static_cast<uint64_t>(MyTime);
+			Dest.Type = pTimeStampType;
 			return true;
+
 		case MyStatus:
 			if (MyActive) {
 				Dest.Int = 1;
@@ -1466,21 +1468,25 @@ public:
 		return false;
 	}
 
-	bool ToString(MQ2VARPTR VarPtr, PCHAR Destination)
+	bool ToString(MQ2VARPTR VarPtr, PCHAR Destination) override
 	{
 		strcpy_s(Destination, MAX_STRING, Active ? "TRUE" : "FALSE");
 		return true;
 	}
 
-	bool FromData(MQ2VARPTR &VarPtr, MQ2TYPEVAR &Source)
+	bool FromData(MQ2VARPTR& VarPtr, MQ2TYPEVAR& Source) override
 	{
 		return false;
 	}
-	bool FromString(MQ2VARPTR &VarPtr, PCHAR Source)
+
+	bool FromString(MQ2VARPTR& VarPtr, PCHAR Source) override
 	{
 		return false;
 	}
 };
+
+MQ2DPSAdvType* pDpsAdvType = nullptr;
+
 
 BOOL dataDPSAdv(PCHAR szName, MQ2TYPEVAR &Dest)
 {
