@@ -1247,12 +1247,6 @@ void DisplayHelp(PCHAR hTemp) {
 		WriteChatf("[DPSAdv]    PetDPS - My pet DPS as a number");
 		WriteChatf("[DPSAdv]    TotalDPS - My DPS and pet DPS together as a number");
 		WriteChatf("[DPSAdv]    TimeElapsed - Number in seconds of time of fight");
-		WriteChatf("[DPSAdv]    MyDamagef - My Damage formated with commas as a string.");
-		WriteChatf("[DPSAdv]    PetDamagef - My pet Damage formated with commas as a string.");
-		WriteChatf("[DPSAdv]    TotalDamagef - My Damage and Pet Damage together formated with commas as a string.");
-		WriteChatf("[DPSAdv]    MyDPSf - My DPS formated with commas as a string.");
-		WriteChatf("[DPSAdv]    PetDPSf - My pet DPS formated with commas as a string.");
-		WriteChatf("[DPSAdv]    TotalDPSf - My DPS and pet DPS formated with commas as a string.");
 	}
 }
 
@@ -1293,45 +1287,28 @@ PLUGIN_API VOID OnReloadUI(VOID) { if (gGameState == GAMESTATE_INGAME && pCharSp
 // Adding TLO for DPS Meter
 // ***********************************************************************************************************
 
-class MQ2DPSAdvType *pDpsAdvType = 0;
-
 class MQ2DPSAdvType : public MQ2Type
 {
-private:
-	char Temps[MAX_STRING];
-bool addComma = false;
 public:
 	enum DpsAdvMembers {
-		MyDamagef = 1,
-		MyDamage = 2,
-		PetDamagef = 3,
-		PetDamage = 4,
-		TotalDamagef = 5,
-		TotalDamage = 6,
-		MyDPSf = 7,
-		MyDPS = 8,
-		PetDPSf = 9,
-		PetDPS = 10,
-		TotalDPSf = 11,
-		TotalDPS = 12,
-		TimeElapsed = 13,
-		MyStatus = 14,
-		MyPetID = 15
+		MyDamage = 1,
+		PetDamage,
+		TotalDamage,
+		MyDPS,
+		PetDPS,
+		TotalDPS,
+		TimeElapsed,
+		MyStatus,
+		MyPetID
 	};
 
 	MQ2DPSAdvType() :MQ2Type("DPSAdv")
 	{
-		TypeMember(MyDamagef);
 		TypeMember(MyDamage);
-		TypeMember(PetDamagef);
 		TypeMember(PetDamage);
-		TypeMember(TotalDamagef);
 		TypeMember(TotalDamage);
-		TypeMember(MyDPSf);
 		TypeMember(MyDPS);
-		TypeMember(PetDPSf);
 		TypeMember(PetDPS);
-		TypeMember(TotalDPSf);
 		TypeMember(TotalDPS);
 		TypeMember(TimeElapsed);
 		TypeMember(MyStatus);
@@ -1342,52 +1319,29 @@ public:
 	{
 	}
 
-	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR &Dest)
+	bool GetMember(MQ2VARPTR VarPtr, PCHAR Member, PCHAR Index, MQ2TYPEVAR& Dest) override
 	{
 		PMQ2TYPEMEMBER pMember = MQ2DPSAdvType::FindMember(Member);
 		if (!pMember)
 			return false;
-		addComma = false;
+
 		switch ((DpsAdvMembers)pMember->ID)
 		{
-		case MyDamagef:
-			if (MyTotal > 999) {
-				sprintf_s(Temps, "%lu", MyTotal);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-				return true;
-			}
 		case MyDamage:
  		    Dest.Int64 = MyTotal;
 			Dest.Type = pInt64Type;
 			return true;
-		case PetDamagef:
-			if (MyPetTotal > 999) {
-				sprintf_s(Temps, "%lu", MyPetTotal);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-				return true;
-			}
+
 		case PetDamage:
 			Dest.Int64 = MyPetTotal;
 			Dest.Type = pInt64Type;
 			return true;
-		case TotalDamagef:
-			if (MyTotal + MyPetTotal > 999) {
-				sprintf_s(Temps, "%lu", MyTotal + MyPetTotal);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-				return true;
-			}
+
 		case TotalDamage:
 			Dest.Int64 = MyTotal + MyPetTotal;
 			Dest.Type = pInt64Type;
 			return true;
-		case MyDPSf:
-			addComma = true;
+
 		case MyDPS:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
@@ -1410,19 +1364,11 @@ public:
 				}
 
 			}
-			if (addComma && MyDPSValue > 999) {
-				sprintf_s(Temps, "%I32u", MyDPSValue);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-			}
-			else {
-				Dest.Int = MyDPSValue;
-				Dest.Type = pIntType;
-			}
+
+			Dest.Int = MyDPSValue;
+			Dest.Type = pIntType;
 			return true;
-		case PetDPSf:
-			addComma = true;
+
 		case PetDPS:
 			if (MyActive) {
 				if (MyPetTotal > 0 && MyFirst > 0) {
@@ -1444,19 +1390,11 @@ public:
 					MyPetDPS = 0;
 				}
 			}
-			if (addComma && MyPetDPS > 999) {
-				sprintf_s(Temps, "%I32u", MyPetDPS);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-			}
-			else {
-				Dest.Int = MyPetDPS;
-				Dest.Type = pIntType;
-			}
+
+			Dest.Float = MyPetDPS;
+			Dest.Type = pFloatType;
 			return true;
-		case TotalDPSf:
-			addComma = true;
+
 		case TotalDPS:
 			if (MyActive) {
 				if (MyTotal > 0 && MyFirst > 0) {
@@ -1478,16 +1416,9 @@ public:
 					TotalDPSValue = 0;
 				}
 			}
-			if (addComma && TotalDPSValue > 999) {
-				sprintf_s(Temps, "%I32u", TotalDPSValue);
-				PutCommas(Temps);
-				Dest.Ptr = Temps;
-				Dest.Type = pStringType;
-			}
-			else {
-				Dest.Int = TotalDPSValue;
-				Dest.Type = pIntType;
-			}
+
+			Dest.Int = TotalDPSValue;
+			Dest.Type = pIntType;
 			return true;
 		case TimeElapsed:
 			if (MyActive) {
@@ -1517,6 +1448,7 @@ public:
 			Dest.Type = pIntType;
 
 			return true;
+
 		case MyPetID:
 			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
 			if (pSpawn && pSpawn->PetID != -1)
