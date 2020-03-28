@@ -314,7 +314,7 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
 	//Total
 	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
 	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
+		PutCommas(szTemp, 2048);
 	else {
 		MakeItTBMK(szTemp);
 		//Need to turn the strings from like 125556 to 125.5k
@@ -323,7 +323,7 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
 	//DPS
 	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
 	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
+		PutCommas(szTemp, 2048);
 	else {
 		MakeItTBMK(szTemp);
 		//Need to turn the strings from like 125556 to 125.5k
@@ -335,26 +335,27 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
 	//This is where Percentage would go, if it wasn't always going to be 100%, if more columns are added, make sure to skip 5!
 }
 
-void ReverseString(PCHAR szLine) {
-	std::string temp2 = szLine;
-	std::reverse(temp2.rbegin(), temp2.rend());
-	sprintf_s(szLine, MAX_STRING, temp2.c_str());
-}
-
-void PutCommas(PCHAR szLine) {
-	ReverseString(szLine);
-	unsigned int j = 0;
-	char temp[MAX_STRING] = { 0 };
-	for (unsigned int i = 0; i < strlen(szLine) + 1; i++) {
-		if (i % 3 == 0 && i != 0 && i != strlen(szLine)) {
-			temp[j] = ',';
-			j++;
+// Given a string of purely digits, add thousands separators
+void PutCommas(char* szLine, size_t bufferSize)
+{
+	size_t length = strlen(szLine);
+	if (length <= 3)
+		return;
+	size_t paddedLength = length + ((length - 1) / 3);
+	if (paddedLength > bufferSize)
+		return;
+	int count = 0;
+	szLine[paddedLength] = 0;
+	while (paddedLength != 0 && length != 0)
+	{
+		if (count == 3)
+		{
+			count = 0;
+			szLine[--paddedLength] = ',';
 		}
-		temp[j] = szLine[i];
-		j++;
+		szLine[--paddedLength] = szLine[--length];
+		count++;
 	}
-	sprintf_s(szLine, MAX_STRING, temp);
-	ReverseString(szLine);
 }
 
 void MakeItTBMK(PCHAR szLine) {
@@ -441,7 +442,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		//Total Damage
 		sprintf_s(szTemp, "%llu", Ent->Damage.Total);
 		if (!UseTBMKOutputs)
-			PutCommas(szTemp);
+			PutCommas(szTemp, 2048);
 		else {
 			MakeItTBMK(szTemp);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -452,7 +453,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char DPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(DPSoutput, "%llu", Ent->GetDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(DPSoutput);
+			PutCommas(DPSoutput, 2048);
 		else {
 			MakeItTBMK(DPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -462,7 +463,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char SDPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(SDPSoutput, "%llu", Ent->GetSDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(SDPSoutput);
+			PutCommas(SDPSoutput, 2048);
 		else {
 			MakeItTBMK(SDPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k

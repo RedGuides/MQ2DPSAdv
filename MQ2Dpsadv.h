@@ -105,7 +105,7 @@ void TargetSwitch();
 void CheckActive();
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine);
 void ReverseString(PCHAR szLine);
-void PutCommas(PCHAR szLine);
+void PutCommas(char* szLine, size_t bufferSize);
 void MakeItTBMK(PCHAR szLine);
 void DisplayHelp(PCHAR hTemp);
 #ifdef DPSDEV
