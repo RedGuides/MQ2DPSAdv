@@ -1,6 +1,6 @@
 
 03/03/2020   1.4.00 (Ctaylor22) Added DPS Meter logic for self and pet. Added a TLO so you can access the information.
-This update does not require the DPSADV UI window to be open. Added mstart, mstop, mreset commands.
+This update does not require the DPSADV UI window to be open. Added MyStart, MyStop, MyReset commands.
 New TLO DPSAdv and members: MyDamage, PetDamage, TotalDamage, MyDPS, PetDPS, TotalDPS, TimeElapsed, MyStatus.
 Following Members are string type and are formated with commas:
 MyDamagef, PetDamagef, TotalDamagef, MyDPSf, PetDPSf, TotalDPSf

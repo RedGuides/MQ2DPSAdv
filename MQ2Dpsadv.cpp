@@ -1181,7 +1181,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		MyDebug = MyDebug ? false : true;
 		WriteChatf("MyDebug is now: %s", MyDebug ? "\agOn" : "\arOff");
 	}
-	else if (!_stricmp(Arg1, "mstart")) {
+	else if (!_stricmp(Arg1, "MyStart")) {
 		MyFirst = 0;
 		MyLast = 0;
 		MyTime = 0;
@@ -1192,17 +1192,17 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		TotalDPSValue = 0;
 		MyActive = true;
 	}
-	else if (!_stricmp(Arg1, "mstop")) {
+	else if (!_stricmp(Arg1, "MyStop")) {
 		if (MyActive) {
 			MyLast = time(nullptr);
 			MyActive = false;
 			MyTime = (MyLast - MyFirst);
-			MyDPSValue = MyTime ? (unsigned int)(MyTotal / MyTime) : (unsigned int)MyTotal;
-			MyPetDPS = MyTime ? (unsigned int)(MyPetTotal / MyTime) : (unsigned int)MyPetTotal;
-			TotalDPSValue = MyTime ? (unsigned int)((MyTotal + MyPetTotal) / MyTime) : (unsigned int)(MyTotal + MyPetTotal);
+			MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
+			MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
+			TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
 		}
 	}
-	else if (!_stricmp(Arg1, "mreset")) {
+	else if (!_stricmp(Arg1, "MyReset")) {
 		MyActive = false;
 		MyFirst = 0;
 		MyLast = 0;
@@ -1215,9 +1215,6 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	}
 	else if (!_stricmp(Arg1, "tlo")) {
 		DisplayHelp("tlo");
-	}
-	else if (!_stricmp(Arg1, "help")) {
-		DisplayHelp("dps");
 	}
 	else {
 		DisplayHelp("dps");
@@ -1236,9 +1233,9 @@ void DisplayHelp(PCHAR hTemp) {
 		WriteChatf("[DPSAdv]     copy - Copy the DPS window.");
 		WriteChatf("[DPSAdv]     debug - Toggles on/off debug messages.");
 		WriteChatf("[DPSAdv]     mydebug - Toggles on/off myDPS debug messages");
-		WriteChatf("[DPSAdv]     mstart - Starts My DPS capture process.");
-		WriteChatf("[DPSAdv]     mstop - Stops my DPS capture process");
-		WriteChatf("[DPSAdv]     mreset - Truns off my DPS capture and set myDPS totals to zero.");
+		WriteChatf("[DPSAdv]     mystart - Starts My DPS capture process.");
+		WriteChatf("[DPSAdv]     mystop - Stops my DPS capture process");
+		WriteChatf("[DPSAdv]     myreset - Turns off my DPS capture and set myDPS totals to zero.");
 		WriteChatf("[DPSAdv]     tlo - get a list of the DPSAdv TLO members.");
 	}
 	else if (!_stricmp(hTemp, "tlo")) {
