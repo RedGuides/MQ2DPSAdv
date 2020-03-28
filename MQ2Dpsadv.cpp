@@ -314,7 +314,7 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
 	//Total
 	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
 	if (!UseTBMKOutputs)
-		PutCommas(szTemp, 2048);
+		PutCommas(szTemp, sizeof(szTemp));
 	else {
 		MakeItTBMK(szTemp);
 		//Need to turn the strings from like 125556 to 125.5k
@@ -323,7 +323,7 @@ void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
 	//DPS
 	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
 	if (!UseTBMKOutputs)
-		PutCommas(szTemp, 2048);
+		PutCommas(szTemp, sizeof(szTemp));
 	else {
 		MakeItTBMK(szTemp);
 		//Need to turn the strings from like 125556 to 125.5k
@@ -442,7 +442,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		//Total Damage
 		sprintf_s(szTemp, "%llu", Ent->Damage.Total);
 		if (!UseTBMKOutputs)
-			PutCommas(szTemp, 2048);
+			PutCommas(szTemp, sizeof(szTemp));
 		else {
 			MakeItTBMK(szTemp);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -453,7 +453,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char DPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(DPSoutput, "%llu", Ent->GetDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(DPSoutput, 2048);
+			PutCommas(DPSoutput, sizeof(DPSoutput));
 		else {
 			MakeItTBMK(DPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -463,7 +463,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char SDPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(SDPSoutput, "%llu", Ent->GetSDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(SDPSoutput, 2048);
+			PutCommas(SDPSoutput, sizeof(SDPSoutput));
 		else {
 			MakeItTBMK(SDPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
