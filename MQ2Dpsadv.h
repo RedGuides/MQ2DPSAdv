@@ -66,8 +66,8 @@ bool UseTBMKOutputs = false;//Intended to show 1.4t, 1.5m, 343k etc outputs for 
 //----------------------------------------------------------------------------
 // new below here for current character DPS totals, this does NOT show up in the DPS Window.
 char MyName[64];
-unsigned int MyTotal;
-unsigned int MyPetTotal;
+uint64_t MyTotal;
+uint64_t MyPetTotal;
 float MyDPSValue;
 float MyPetDPS;
 float TotalDPSValue;
