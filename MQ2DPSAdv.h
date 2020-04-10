@@ -6,28 +6,6 @@ char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch ","
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
 enum { NOTOTAL, TOTALABOVE, TOTALSECOND, TOTALBOTTOM };
 
-static int Coloring[] = {
-   {0},   //unk
-   {13},   //war
-   {4},   //clr
-   {10},   //pal
-   {11},   //rng
-   {13},   //shd
-   {5},   //dru
-   {8},   //mnk
-   {2},   //brd
-   {12},   //rog
-   {14},   //shm
-   {9},   //nec
-   {14},   //wiz
-   {7},   //mag
-   {6},   //enc
-   {3},   //bst
-   {15},   //ber
-};
-
-int ColorTest[17];
-
 PSPAWNINFO CurTarget;
 time_t Intervals;
 int CListType;
@@ -55,7 +33,7 @@ bool WrongUI;
 bool ShowMeTop;
 bool ShowMeMin;
 int ShowMeMinNum;
-bool UseRaidColors;//Use colors from set raid colors for each class display. 
+bool UseRaidColors;//Use colors from set raid colors for each class display.
 bool LiveUpdate;//Update Total/DPS/Time/% as it happens instead of a set pulse.
 int ShowTotal;
 int FightIA;//Fight Inactive.
@@ -84,13 +62,6 @@ struct EntDamage {
 	int AddTime;
 };
 
-PLUGIN_API VOID SetGameState(DWORD GameState);
-PLUGIN_API VOID OnCleanUI(VOID);
-PLUGIN_API VOID OnReloadUI(VOID);
-PLUGIN_API VOID InitializePlugin(VOID);
-PLUGIN_API VOID ShutdownPlugin(VOID);
-PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color);
-PLUGIN_API VOID OnPulse(VOID);
 void CreateDPSWindow();
 void DestroyDPSWindow();
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitOther(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage);
@@ -104,13 +75,9 @@ void HandleDeath(PCHAR Line);
 void TargetSwitch();
 void CheckActive();
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine);
-void ReverseString(PCHAR szLine);
-void PutCommas(char* szLine, size_t bufferSize);
 void MakeItTBMK(PCHAR szLine);
 void DisplayHelp(PCHAR hTemp);
-#ifdef DPSDEV
-void         DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine);
-#endif
+void SetMyName();
 
 class DPSMob {
 public:
@@ -151,7 +118,7 @@ public:
 	bool Mercenary;
 	EntDamage Damage;
 	DPSEntry* LastEntry;
-	vector<DPSEntry*> EntList;
+	std::vector<DPSEntry*> EntList;
 
 	DPSMob();
 	DPSMob::DPSMob(PCHAR MobName, size_t MobLen);
@@ -162,7 +129,7 @@ public:
 	DPSEntry* GetEntry(char EntName[64], bool Create = true);
 };
 
-vector<DPSMob*> MobList;
+std::vector<DPSMob*> MobList;
 DPSMob* LastMob;
 DPSMob* CurTarMob;
 DPSMob* CurListMob;

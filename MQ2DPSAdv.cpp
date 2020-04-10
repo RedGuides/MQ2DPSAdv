@@ -2,12 +2,9 @@
 // MQ2DPSAdv.cpp
 
 #include "../MQ2Plugin.h"
-using namespace std;
 PreSetup("MQ2DPSAdv");
 PLUGIN_VERSION(1.4);
-#include <vector>
 #include "MQ2DPSAdv.h"
-//#define DPSDEV
 
 // ############################### DPSEntry Start ############################################
 
@@ -239,7 +236,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	int CheckUI = false;
 	//Tabs holder exists?
 	if (!(Tabs = (CTabWnd*)GetChildItem("DPS_Tabs"))) CheckUI = true;
-	
+
 	//DPS Settings Tab
 	if (!(CShowMeTop = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeTopBox"))) CheckUI = true;
 	if (!(CShowMeMin = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeMinBox"))) CheckUI = true;
@@ -511,17 +508,7 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 5, NormalColor);
 	}
 }
-/*
-void CDPSAdvWnd::SaveSetting(PCHAR Key, PCHAR Value, ...) {
-   char zOutput[MAX_STRING]; va_list vaList; va_start(vaList,Value);
-   vsprintf_s(zOutput,Value,vaList);
-   WritePrivateProfileString(GetCharInfo()->Name, Key, zOutput, INIFileName);
-   if (!Saved) {
-	  Saved = true;
-	  WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
-   }
-}
-*/
+
 void CDPSAdvWnd::SaveLoc() {
 	if (!GetCharInfo()) return;
 	CHAR szTemp[MAX_STRING] = { 0 };
@@ -562,7 +549,7 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	
+
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
 		char szColumn[16] = { 0 };
@@ -661,11 +648,10 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 			LTopList->SetColumnWidth(i, temp);
 		}
 	}
-	
+
 	if (FightIA < 3) FightIA = 8;
 	if (FightTO < 3) FightTO = 30;
 	if (EntTO < 3) EntTO = 8;
-	if (Debug) gSpewToFile = TRUE;
 	if (CListType > 1) CListType = CLISTTARGET;
 	LTopList->SetColors(NormalColor, EntHover, EntHighlight);
 	CMobList->SetChoice(CListType);
@@ -674,10 +660,10 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
-	if (Message == 10) CheckActive();
-	if (Message == 3 && pWnd == (CXWnd*)LTopList) LTopList->SetCurSel(-1);
-	else if (Message == 10 && pWnd == (CXWnd*)DPSWnd) CheckActive();
-	else if (Message == 1) {
+	if (Message == XWM_CLOSE) CheckActive();
+	if (Message == XWM_RCLICK && pWnd == (CXWnd*)LTopList) LTopList->SetCurSel(-1);
+	else if (Message == XWM_CLOSE && pWnd == (CXWnd*)DPSWnd) CheckActive();
+	else if (Message == XWM_LCLICK) {
 		if (pWnd == (CXWnd*)Tabs) LoadSettings();
 		else if (pWnd == (CXWnd*)CShowMeTop) ShowMeTop = CShowMeTop->Checked ? true : false;
 		else if (pWnd == (CXWnd*)CShowMeMin) ShowMeMin = CShowMeMin->Checked ? true : false;
@@ -718,7 +704,7 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 			Intervals -= 1; // Force update next Pulse.
 		}
 	}
-	else if (Message == 14) {
+	else if (Message == XWM_NEWVALUE) {
 		CHAR szTemp[MAX_STRING] = { 0 };
 		GetCXStr(((CEditWnd*)pWnd)->InputText, szTemp);
 		if (pWnd == (CXWnd*)TShowMeMin) {
@@ -1115,12 +1101,6 @@ void HandleDeath(DPSMob* DeadMob) {
 	DeadMob->Dead = true;
 }
 
-#ifdef DPSDEV
-void DPSTestCmd(PSPAWNINFO pChar, PCHAR szLine) {
-
-}
-#endif
-
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 	char Arg1[MAX_STRING];
 	GetArg(Arg1, szLine, 1);
@@ -1236,7 +1216,7 @@ void CreateDPSWindow() {
 			((CXWnd*)DPSWnd)->Show(1, 1);
 		}
 		char szTitle[MAX_STRING];
-		sprintf_s(szTitle, "DPS Advanced %.1f", MQ2Version);
+		sprintf_s(szTitle, "DPS Advanced v%.1f", MQ2Version);
 		DPSWnd->CSetWindowText(szTitle);
 	}
 	CheckActive();
@@ -1255,11 +1235,20 @@ PLUGIN_API VOID SetGameState(DWORD GameState) {
 	DebugSpewAlways("GameState Change: %i", GameState);
 	if (GameState == GAMESTATE_INGAME) {
 		if (!DPSWnd) CreateDPSWindow();
+		// Name could change without the gamestate changing, but it's rare
+		SetMyName();
 	}
 }
 
-PLUGIN_API VOID OnCleanUI(VOID) { DestroyDPSWindow(); }
-PLUGIN_API VOID OnReloadUI(VOID) { if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow(); }
+PLUGIN_API VOID OnCleanUI()
+{
+	DestroyDPSWindow();
+}
+
+PLUGIN_API VOID OnReloadUI()
+{
+	if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow();
+}
 
 // ***********************************************************************************************************
 // Adding TLO for DPS Meter
@@ -1473,7 +1462,18 @@ BOOL dataDPSAdv(PCHAR szName, MQ2TYPEVAR &Dest)
 	return true;
 }
 
-PLUGIN_API VOID InitializePlugin(VOID) {
+void SetMyName()
+{
+	PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+	if (pSpawn) {
+		strcpy_s(MyName, pSpawn->DisplayedName);
+	} else {
+		strcpy_s(MyName, "NameNotFound");
+	}
+}
+
+PLUGIN_API VOID InitializePlugin()
+{
 	LastMob = 0;
 	CurTarget = 0;
 	CurTarMob = 0;
@@ -1482,29 +1482,28 @@ PLUGIN_API VOID InitializePlugin(VOID) {
 	Zoning = false;
 	ShowMeTop = false;
 	WrongUI = false;
-	AddXMLFile("MQUI_DPSAdvWnd.xml");
+	// TODO:  Add as a resource to automatically unpack
+	if (IsXMLFilePresent("MQUI_DPSAdvWnd.xml")) {
+		AddXMLFile("MQUI_DPSAdvWnd.xml");
+	} else {
+		WriteChatf("MQ2DPSAdv:  Could not find MQUI_DPSAdvWnd.xml.  Please place in uifiles/default");
+	}
 	AddCommand("/dpsadv", DPSAdvCmd);
-#ifdef DPSDEV
-	AddCommand("/dpstest", DPSTestCmd);
-#endif
 	// additions for DPS Meter
 	pDpsAdvType = new MQ2DPSAdvType;
 	AddMQ2Data("DPSAdv", dataDPSAdv);
 	// Additions End
 	CheckActive();
-	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
-	else CreateDPSWindow();
-	PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-	if (pSpawn) strcpy_s(MyName, pSpawn->DisplayedName);
-	MyActive = 0;
+	if (gGameState == GAMESTATE_INGAME && pCharSpawn) {
+		CreateDPSWindow();
+	}
+	SetMyName();
+	MyActive = false;
 }
 
-PLUGIN_API VOID ShutdownPlugin(VOID) {
+PLUGIN_API VOID ShutdownPlugin() {
 	DestroyDPSWindow();
 	RemoveCommand("/dpsadv");
-#ifdef DPSDEV
-	RemoveCommand("/dpstest");
-#endif
 	// additions for DPS Meter
 	RemoveMQ2Data("DPSAdv");
 	delete pDpsAdvType;
@@ -1556,21 +1555,21 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 
 		case 20://Color: 20 - You regain some experience from resurrection.
 
-		case 256://Color: 256 - Other player /say messages	
+		case 256://Color: 256 - Other player /say messages
 		case 257://Color: 257 - Other /tell's you
 		case 258://Color: 258 - Other tells /group
 		case 259://Color: 259 - Guild Chat - Incoming
 		case 260://Color: 260 - Other /ooc
 		case 261://Color: 261 - Other /auction
-		case 262://Color: 262 - Other /shout	
+		case 262://Color: 262 - Other /shout
 		case 263://Color: 263 - other Emote commands/eat food messages (/cry, Chomp, chomp, chomp... Soandso takes a bite...etc)
 		case 264://Color: 264 - You begin casting
 			break;
 		case 265://Color: 265 - You hit other (melee/melee crit)
 			HandleYouHitOther(Line);
 			break;
-		case 266://Color: 266 - Other hits you	
-		case 267://Color: 267 - You miss other	
+		case 266://Color: 266 - Other hits you
+		case 267://Color: 267 - You miss other
 		case 268://Color: 268 - Riposte/Dodge/Other Misses You
 		case 269://Color: 269 - Announcement (GM Events etc)
 		case 270://Color: 270 - You have become better at [Skill]! (Number)
@@ -1586,7 +1585,7 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 279://Color: 279 - Others Hits Other
 			HandleOtherHitOther(Line); //Other hits other
 			break;
-		case 280://Color: 280 - Other Misses Other	
+		case 280://Color: 280 - Other Misses Other
 		case 281://Color: 281 - /who
 		case 282://Color: 282 - Other /yell
 			break;
@@ -1595,9 +1594,9 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 			break;
 		case 284://Color: 284 - Spell wear off messages
 		case 285://Color: 285 - Coin collection/Split
-		case 286://Color: 286 - Loot Related (Master looter actions, you loot)	
-		case 287://Color: 287 - Dice Rolls	
-		case 288://Color: 288 - Other Starts Casting Messages	
+		case 286://Color: 286 - Loot Related (Master looter actions, you loot)
+		case 287://Color: 287 - Dice Rolls
+		case 288://Color: 288 - Other Starts Casting Messages
 		case 289://Color: 289 - Target is out of range, get closer/Interupt/Fizzle/other spell failure
 		case 290://Color: 290 - Channel Lists after logged in
 		case 291://Color: 291 - Chat Channel 1 - Incoming
@@ -1614,8 +1613,8 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 303://Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
 
 		case 306://Color: 306 - Enrage (Showed for pet)
-		case 307://Color: 307 - Your /say messages, mob advances messages.	
-		case 308://Color: 308 - You tell other.	
+		case 307://Color: 307 - Your /say messages, mob advances messages.
+		case 308://Color: 308 - You tell other.
 		case 309://Color: 309 - Group conversation
 		case 310://Color: 310 - Guild conversation - Outgoing
 		case 311://Color: 311 - you /ooc
@@ -1641,19 +1640,19 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 329://Color: 329 - Damage Shield hits you.
 		case 330://Color: 330 - Raid Role messages.
 
-		case 333://Color: 333 - Item Focus messages	
+		case 333://Color: 333 - Item Focus messages
 		case 334://Color: 334 - You gain Experience messages
 		case 335://Color: 335 - You have already finished collecting [Item].
 			break;
-		case 336://Color: 336 - Pet Non-Melee/Pet begins to cast
+		case 336://Color: 336 - Pet Non-Melee/Pet beings to cast
 			HandleNonMelee(Line); //All pet non-melee (yours and others)
 			break;
 		case 337://Color: 337 - Pet messages (YourPet says, "Following you master.")
 
-		case 339://Color: 339 - Strike thru (yours and others)	
+		case 339://Color: 339 - Strike thru (yours and others)
 		case 340://Color: 340 - You are stunned/unstunned messages.
 
-		case 342://Color: 342 - fellowship messages	
+		case 342://Color: 342 - fellowship messages
 		case 343://Color: 343 - corpse emote
 
 		case 345://Color: 345 - Guild plants banner
@@ -1682,7 +1681,7 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 371://Color: 371 - Destroy item message
 
 		case 373://Color: 373 - Heal over time on other?
-		case 374://Color: 374 - You heal other	
+		case 374://Color: 374 - You heal other
 		case 375://Color: 375 - Other buffs other/Other Heal Other
 			break;
 		case 376://Color: 376 - Your DoT's
@@ -1698,7 +1697,7 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 		case 380://Color: 380 - Your spell messages
 			break;
 		default:
-			//Don't Know these, lets see what it is. 
+			//Don't Know these, lets see what it is.
 			if (Debug) WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, Line);
 			break;
 		}
@@ -1768,7 +1767,7 @@ void IntPulse() {
 	//WriteChatf("Active: %s", Active ? "Yes" : "No");
 }
 
-PLUGIN_API VOID OnPulse(VOID) {
+PLUGIN_API VOID OnPulse() {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
 
 	if (Active && !WrongUI) {
@@ -1814,13 +1813,13 @@ void ZoneProcess() {
 	}
 }
 
-PLUGIN_API VOID OnBeginZone(VOID) {
+PLUGIN_API VOID OnBeginZone() {
 	ZoneProcess();
 	Zoning = true;
 	CheckActive();
 }
 
-PLUGIN_API VOID OnEndZone(VOID) {
+PLUGIN_API VOID OnEndZone() {
 	Zoning = false;
 	CheckActive();
 }
