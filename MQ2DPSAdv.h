@@ -77,7 +77,6 @@ void CheckActive();
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine);
 void MakeItTBMK(PCHAR szLine);
 void DisplayHelp(PCHAR hTemp);
-void SetMyName();
 
 class DPSMob {
 public:

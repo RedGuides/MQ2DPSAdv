@@ -1232,11 +1232,18 @@ void DestroyDPSWindow() {
 }
 
 PLUGIN_API VOID SetGameState(DWORD GameState) {
-	DebugSpewAlways("GameState Change: %i", GameState);
 	if (GameState == GAMESTATE_INGAME) {
 		if (!DPSWnd) CreateDPSWindow();
 		// Name could change without the gamestate changing, but it's rare
-		SetMyName();
+		if (GetCharInfo()) {
+			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+			if (pSpawn) {
+				strcpy_s(MyName, pSpawn->DisplayedName);
+				return;
+			}
+		}
+		// MyName is used for matching DPS and we don't want false positive matches.
+		strcpy_s(MyName, "NameNotFound");
 	}
 }
 
@@ -1462,16 +1469,6 @@ BOOL dataDPSAdv(PCHAR szName, MQ2TYPEVAR &Dest)
 	return true;
 }
 
-void SetMyName()
-{
-	PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-	if (pSpawn) {
-		strcpy_s(MyName, pSpawn->DisplayedName);
-	} else {
-		strcpy_s(MyName, "NameNotFound");
-	}
-}
-
 PLUGIN_API VOID InitializePlugin()
 {
 	LastMob = 0;
@@ -1494,10 +1491,6 @@ PLUGIN_API VOID InitializePlugin()
 	AddMQ2Data("DPSAdv", dataDPSAdv);
 	// Additions End
 	CheckActive();
-	if (gGameState == GAMESTATE_INGAME && pCharSpawn) {
-		CreateDPSWindow();
-	}
-	SetMyName();
 	MyActive = false;
 }
 
