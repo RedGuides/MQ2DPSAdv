@@ -106,20 +106,19 @@ uint64_t DPSMob::DPSEntry::GetDPS() {
 	//Damage.First is:		1580130212
 	//Damage.AddTime is:	0
 	//below code fixes this corner case scenario. -eqmule
-	int64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
+	uint64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
 	if (dividetotal == 0)
-	{
 		dividetotal++;
-	}
-	return (int64_t)(Damage.Total / dividetotal);
+
+	return (uint64_t)(Damage.Total / dividetotal);
 }
 
 uint64_t DPSMob::DPSEntry::GetSDPS() {
-	auto val = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
-	if (val == 0)
-		return 0;
-	//why is this cast to an int?
-	return (int)(Damage.Total / val);
+	uint64_t dividetotal = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
+	if (dividetotal == 0)
+		dividetotal++;
+
+	return (uint64_t)(Damage.Total / dividetotal);
 }
 
 void DPSMob::DPSEntry::Sort() {
