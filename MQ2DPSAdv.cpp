@@ -89,14 +89,21 @@ void DPSMob::DPSEntry::AddDamage(int Damage1) {
 		DoSort = true;
 		return;
 	}
+
 	DoSort = true;
-	if (Damage.First && (time(nullptr) - Damage.Last >= EntTO)) {
+	time_t timenow = time(nullptr);
+
+	if (Damage.First && (timenow - Damage.Last >= EntTO)) {
 		Damage.AddTime += (int)(Damage.Last - Damage.First) + 1;
 		Damage.First = 0;
 	}
+
 	Damage.Total += Damage1;
-	Damage.Last = time(nullptr);
-	if (!Damage.First) Damage.First = time(nullptr);
+	if (!Damage.First)
+		Damage.First = timenow;
+
+	Damage.Last = timenow;
+
 	Parent->AddDamage(Damage1);
 }
 
@@ -978,12 +985,13 @@ void AddMyDamage(char* EntName, int Damage1) {
 	//if Me Do this
 	uint64_t MyTotalBefore = MyTotal;
 	uint64_t MyPetTotalBefore = MyPetTotal;
+	time_t timenow = time(nullptr);
 	int flag1 = 0;
 	if ((!_stricmp(MyName, EntName) || !_stricmp(EntName, "You"))
 		|| (strstr(EntName, "`s pet") && strstr(EntName, MyName))) {
 		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
-		if (!MyFirst) MyFirst = (int)time(nullptr);
-		MyLast = (int)time(nullptr);
+		if (!MyFirst) MyFirst = timenow;
+		MyLast = timenow;
 		if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
 			MyTotal += Damage1;
 			flag1 = 1;
@@ -1003,8 +1011,8 @@ void AddMyDamage(char* EntName, int Damage1) {
 				if (MyDebug) WriteChatf("[AddMyDamage] 4 -%s-", dPet->DisplayedName);
 				if (!_stricmp(dPet->DisplayedName, EntName)) {
 					if (MyDebug) WriteChatf("[AddMyDamage] 5 %i", Damage1);
-					if (!MyFirst) MyFirst = (int)time(nullptr);
-					MyLast = (int)time(nullptr);
+					if (!MyFirst) MyFirst = timenow;
+					MyLast = timenow;
 					MyPetTotal += Damage1;
 					flag1 = 3;
 				}
@@ -1700,9 +1708,11 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
 }
 
 bool CheckInterval() {
-	if (!Intervals) Intervals = time(nullptr);
-	else if (Intervals != time(nullptr)) {
-		Intervals = time(nullptr);
+	time_t timenow = time(nullptr);
+	if (!Intervals)
+		Intervals = timenow;
+	else if (Intervals != timenow) {
+		Intervals = timenow;
 		return true;
 	}
 	return false;
@@ -1738,16 +1748,17 @@ void IntPulse() {
 			i--;
 		}
 		else {
-			if (Mob->Active && !Mob->Dead && time(nullptr) - Mob->Damage.Last > FightTO) {
+			time_t timenow = time(nullptr);
+			if (Mob->Active && !Mob->Dead && timenow - Mob->Damage.Last > FightTO) {
 				HandleDeath(Mob);
 				CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(nullptr) - Mob->Damage.Last > FightIA) {
+			else if (Mob->Active && !Mob->Dead && !Mob->InActive && timenow - Mob->Damage.Last > FightIA) {
 				Mob->InActive = true;
 				sprintf_s(Mob->Tag, "[IA] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(nullptr) - Mob->Damage.Last < FightIA) {
+			else if (Mob->Active && !Mob->Dead && Mob->InActive && timenow - Mob->Damage.Last < FightIA) {
 				Mob->InActive = false;
 				sprintf_s(Mob->Tag, "[A] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
