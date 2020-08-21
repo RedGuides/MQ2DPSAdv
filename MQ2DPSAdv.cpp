@@ -101,25 +101,19 @@ void DPSMob::DPSEntry::AddDamage(int Damage1) {
 }
 
 uint64_t DPSMob::DPSEntry::GetDPS() {
-	//Damage.Total is:		475082
-	//Damage.Last is:		1580130211
-	//Damage.First is:		1580130212
-	//Damage.AddTime is:	0
-	//below code fixes this corner case scenario. -eqmule
-	int64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
+	uint64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
 	if (dividetotal == 0)
-	{
-		dividetotal++;
-	}
-	return (int64_t)(Damage.Total / dividetotal);
+		return 0;
+
+	return (Damage.Total / dividetotal);
 }
 
 uint64_t DPSMob::DPSEntry::GetSDPS() {
-	auto val = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
-	if (val == 0)
+	uint64_t dividetotal = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
+	if (dividetotal == 0)
 		return 0;
-	//why is this cast to an int?
-	return (int)(Damage.Total / val);
+
+	return (Damage.Total / dividetotal);
 }
 
 void DPSMob::DPSEntry::Sort() {
@@ -197,12 +191,19 @@ bool DPSMob::IsPet() {
 
 void DPSMob::AddDamage(int Damage1) {
 	Damage.Total += Damage1;
-	Damage.Last = time(nullptr);
-	if (!Damage.First) Damage.First = time(nullptr);
+	time_t timenow = time(nullptr);
+
+	if (!Damage.First)
+		Damage.First = timenow;
+
+	Damage.Last = timenow;
+
 	if (!Active) {
 		Active = true;
 		sprintf_s(Tag, "[A] ");
-		if (!IsPet() && !Mercenary) DPSWnd->DrawCombo();
+
+		if (!IsPet() && !Mercenary)
+			DPSWnd->DrawCombo();
 	}
 }
 
@@ -253,7 +254,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	//DPS Tab
 	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
 	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
-	
+
 	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
 
 	if (CheckUI) {
@@ -600,11 +601,11 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	else strcpy_s(szName, szChar);
 	Saved = (GetPrivateProfileInt(szName, "Saved", 0, INIFileName) > 0 ? true : false);
 	if (Saved) {
-		SetLocation({ 
+		SetLocation({
 			(LONG)GetPrivateProfileInt(szName, "Left", 0, INIFileName),
 			(LONG)GetPrivateProfileInt(szName, "Top", 0, INIFileName),
 			(LONG)GetPrivateProfileInt(szName, "Right", 0, INIFileName),
-			(LONG)GetPrivateProfileInt(szName, "Bottom", 0, INIFileName) 
+			(LONG)GetPrivateProfileInt(szName, "Bottom", 0, INIFileName)
 		});
 
 		SetAlpha((BYTE)GetPrivateProfileInt(szName, "Alpha", 0, INIFileName));
@@ -1128,7 +1129,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 			DPSWnd->LoadLoc(szCopy);
 			DPSWnd->SaveLoc();
 		}
-		else 
+		else
 			WriteChatf("\arFailed to Copy: DPS Window not loaded.");
 	}
 	else if (!_stricmp(Arg1, "Debug")) {
