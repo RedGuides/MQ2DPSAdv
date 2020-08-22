@@ -40,6 +40,7 @@ int FightIA;//Fight Inactive.
 int FightTO;//Fight Timeout.
 int EntTO;//Entity Timeout.
 bool UseTBMKOutputs = false;//Intended to show 1.4t, 1.5m, 343k etc outputs for total and DPS.
+int HistoryLimit = 25; // Maximum number of mobs to store before deleting the closest to the beginning
 
 //----------------------------------------------------------------------------
 // new below here for current character DPS totals, this does NOT show up in the DPS Window.
@@ -96,13 +97,13 @@ public:
 		DPSEntry* Master;
 
 		DPSEntry();
-		DPSEntry(char EntName[64], DPSMob* pParent);
+		DPSEntry(char EntName[], DPSMob* pParent, bool PCOnly = false);
 		void Init();
 		void AddDamage(int Damage1);
 		uint64_t GetDPS();
 		uint64_t GetSDPS();
 		void Sort();
-		void GetSpawn();
+		void GetSpawn(bool PCOnly = false);
 		bool CheckMaster();
 	};
 
@@ -125,7 +126,7 @@ public:
 	void AddDamage(int Damage1);
 	void GetSpawn();
 	bool IsPet();
-	DPSEntry* GetEntry(char EntName[64], bool Create = true);
+	DPSEntry* GetEntry(char EntName[], bool Create = true, bool PCOnly = false);
 };
 
 std::vector<DPSMob*> MobList;
@@ -160,7 +161,7 @@ public:
 	void DrawList(bool DoDead = false);
 	void SetTotal(int LineNum, DPSMob* Mob);
 	void DrawCombo();
-	void LoadLoc(char szChar[64] = 0);
+	void LoadLoc(char szChar[] = 0);
 	void LoadSettings();
 	void SaveLoc();
 	void SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total = false, bool MeTop = false);

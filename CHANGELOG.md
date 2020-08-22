@@ -1,5 +1,16 @@
+08/22/2020   1.5.00 (Knightly)
+Fix naming collision where a non-PC having the same name as a PC would crash
+Add HistoryLimit setting to the ini which allows you to specify how many mobs for which to keep a DPS history.
+  This should help in those times where running the plugin for long periods of time eventually slows down or
+  crashes.  The default is 25.
+Add /dps limit command to set the history limit for that character
+Hopefully fixes an issue where empty sections would get pushed to the ini
 
-03/03/2020   1.4.00 (Ctaylor22) Added DPS Meter logic for self and pet. Added a TLO so you can access the information.
+08/22/2020   1.4.00 (Chatwiththisname)
+Fix bugs in time calculations so that "First" damage can no longer occur after "Last" damage
+
+03/03/2020   1.4.00 (Ctaylor22)
+Added DPS Meter logic for self and pet. Added a TLO so you can access the information.
 This update does not require the DPSADV UI window to be open. Added MyStart, MyStop, MyReset commands.
 New TLO DPSAdv and members: MyDamage, PetDamage, TotalDamage, MyDPS, PetDPS, TotalDPS, TimeElapsed, MyStatus.
 added several commands including help.

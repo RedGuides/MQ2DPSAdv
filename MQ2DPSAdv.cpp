@@ -2,9 +2,10 @@
 // MQ2DPSAdv.cpp
 
 #include "../MQ2Plugin.h"
-PreSetup("MQ2DPSAdv");
-PLUGIN_VERSION(1.4);
 #include "MQ2DPSAdv.h"
+
+PreSetup("MQ2DPSAdv");
+PLUGIN_VERSION(1.5);
 
 // ############################### DPSEntry Start ############################################
 
@@ -12,20 +13,20 @@ DPSMob::DPSEntry::DPSEntry() {
 	Init();
 }
 
-DPSMob::DPSEntry::DPSEntry(CHAR EntName[256], DPSMob* pParent) {
+DPSMob::DPSEntry::DPSEntry(CHAR EntName[], DPSMob* pParent, bool PCOnly /* = false */) {
 	Init();
 	Parent = pParent;
 	strcpy_s(Name, EntName);
-	GetSpawn();
+	GetSpawn(PCOnly);
 }
 
 void DPSMob::DPSEntry::Init() {
-	Parent = 0;
+	Parent = nullptr;
 	SpawnType = -1;
 	Mercenary = false;
 	Class = 0;
-	Spawn = 0;
-	Master = 0;
+	Spawn = nullptr;
+	Master = nullptr;
 	DoSort = false;
 	Pets = false;
 	CheckPetName = false;
@@ -37,10 +38,10 @@ void DPSMob::DPSEntry::Init() {
 	Damage.AddTime = 0;
 }
 
-void DPSMob::DPSEntry::GetSpawn() {
+void DPSMob::DPSEntry::GetSpawn(bool PCOnly /* = false */) {
 	PSPAWNINFO pSpawn = (PSPAWNINFO)pSpawnList;
 	while (pSpawn) {
-		if (!_stricmp(pSpawn->DisplayedName, Name)) {
+		if (!_stricmp(pSpawn->DisplayedName, Name) && (!PCOnly || pSpawn->Type == SPAWN_PLAYER)) {
 			if (pSpawn->Type != SPAWN_CORPSE) {
 				Spawn = pSpawn;
 				SpawnType = Spawn->Type;
@@ -70,13 +71,13 @@ bool DPSMob::DPSEntry::CheckMaster() {
 			return true;
 		}
 	}
-	if (Master && (!Spawn || Spawn->MasterID <= 0 || !Master->Spawn || Master->Spawn->SpawnID != Spawn->MasterID)) Master = 0;
-	if (Master) return true;
-	else if (Spawn && Spawn->MasterID > 0) {
+	if (Master != nullptr && (Spawn == nullptr || Spawn->MasterID <= 0 || Master->Spawn == nullptr || Master->Spawn->SpawnID != Spawn->MasterID)) Master = nullptr;
+	if (Master != nullptr) return true;
+	if (Spawn && Spawn->MasterID > 0) {
 		PSPAWNINFO NewMaster = (PSPAWNINFO)GetSpawnByID(Spawn->MasterID);
 		if (NewMaster) {
-			Master = Parent->GetEntry(NewMaster->DisplayedName);
-			return true;
+			Master = Parent->GetEntry(NewMaster->DisplayedName, true, true);
+			return Master != nullptr;
 		}
 	}
 	return false;
@@ -185,7 +186,7 @@ void DPSMob::GetSpawn() {
 				Dead = false;
 				return;
 			}
-			else Dead = true;
+			Dead = true;
 		}
 		pSpawn = pSpawn->pNext;
 	}
@@ -214,28 +215,30 @@ void DPSMob::AddDamage(int Damage1) {
 	}
 }
 
-DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[256], bool Create) {
+DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[], bool Create /* = true */, bool PCOnly /* = false */) {
 	char szBuffer[256] = { 0 };
 	strcpy_s(szBuffer, 256, EntName);
 	if (!_stricmp(szBuffer, "You")) {
 		strcpy_s(szBuffer, 256, ((PSPAWNINFO)pLocalPlayer)->Name);
 	}
-	if (LastEntry && !strcmp(LastEntry->Name, szBuffer)) return LastEntry;
-	else {
-		if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
-		for (int i = 0; i < (int)EntList.size(); i++) {
-			if (!strcmp(EntList[i]->Name, szBuffer)) {
-				LastEntry = EntList[i];
-				return LastEntry;
-			}
+
+	if (LastEntry && !strcmp(LastEntry->Name, szBuffer) && (!PCOnly || LastEntry->SpawnType == SPAWN_PLAYER)) return LastEntry;
+
+	if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
+	// TODO: This and other areas like this should probably be range based for loops.
+	for (int i = 0; i < (int)EntList.size(); i++) {
+		if (EntList[i] != nullptr && !strcmp(EntList[i]->Name, szBuffer) && (!PCOnly || EntList[i]->SpawnType == SPAWN_PLAYER)) {
+			LastEntry = EntList[i];
+			return LastEntry;
 		}
 	}
+
 	if (Create) {
-		LastEntry = new DPSEntry(szBuffer, this);
+		LastEntry = new DPSEntry(szBuffer, this, PCOnly);
 		EntList.push_back(LastEntry);
 		return LastEntry;
 	}
-	return 0;
+	return nullptr;
 }
 
 // ############################### CDPSAdvWnd START ############################################
@@ -291,9 +294,9 @@ void CDPSAdvWnd::DrawCombo() {
 	CMobList->InsertChoice(szTemp);
 
 
-	DPSMob* Mob = 0;
-	int i = 0, ListSize = 0;
-	for (i = 0; i < (int)MobList.size(); i++) {
+	DPSMob* Mob = nullptr;
+	int ListSize = 0;
+	for (int i = 0; i < (int)MobList.size(); ++i) {
 		Mob = MobList[i];
 		if (Mob->SpawnType == 1 && Mob->Active && !Mob->IsPet() && !Mob->Mercenary) {
 			ListSize++;
@@ -381,7 +384,6 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 	int ScrollPos = LTopList->GetVScrollPos();
 	int CurSel = LTopList->GetCurSel();
 	CHAR szTemp[MAX_STRING] = { 0 };
-	unsigned int j = 0;
 	LTopList->DeleteAll();
 	int i = 0, LineNum = 0, RankAdj = 0, ShowMeLineNum = 0;
 	bool FoundMe = false, ThisMe = false;
@@ -518,7 +520,9 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 }
 
 void CDPSAdvWnd::SaveLoc() {
-	if (!GetCharInfo()) return;
+	if (!GetCharInfo() || GetCharInfo()->Name[0] == '\0')
+		return;
+
 	CHAR szTemp[MAX_STRING] = { 0 };
 	WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
 	sprintf_s(szTemp, "%i", GetLocation().top);
@@ -557,6 +561,8 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
+	sprintf_s(szTemp, "%i", HistoryLimit ? 1 : 0);
+	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
 
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
@@ -646,6 +652,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	FightInActive = GetPrivateProfileInt(szName, "FightInActive", 0xFF777777, INIFileName);
 	FightDead = GetPrivateProfileInt(szName, "FightDead", 0xFF330000, INIFileName);
 	UseTBMKOutputs = (GetPrivateProfileInt(szName, "UseTBMKOutputs", 0, INIFileName) > 0 ? true : false);
+	HistoryLimit = GetPrivateProfileInt(szName, "HistoryLimit", 25, INIFileName);
 
 	//Restore the column widths
 	for (int i = 0; i <= 5; i++) {
@@ -729,7 +736,6 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				szTemp[2] = 0;
 				FightIA = atoi(szTemp);
 				if (FightIA < 3) FightIA = 8;
-				sprintf_s(szTemp, "%i", FightIA);
 			}
 		}
 		else if (pWnd == (CXWnd*)TFightTO) {
@@ -737,7 +743,6 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				szTemp[2] = 0;
 				FightTO = atoi(szTemp);
 				if (FightTO < 3) FightTO = 30;
-				sprintf_s(szTemp, "%i", FightTO);
 			}
 		}
 		else if (pWnd == (CXWnd*)TEntTO) {
@@ -745,7 +750,6 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				szTemp[2] = 0;
 				EntTO = atoi(szTemp);
 				if (EntTO < 3) EntTO = 8;
-				sprintf_s(szTemp, "%i", EntTO);
 			}
 		}
 	}
@@ -779,8 +783,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 	int HitPos = 0, Action = 0;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+
+	*Damage = atoi(strpbrk(Line, "1234567890"));
 	while (OtherHits[Action]) {
 		HitPos = (int)(strstr(Line, OtherHits[Action]) - Line);
 		if (HitPos > 0)
@@ -811,8 +815,8 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(PCHAR Line, CHAR(&M
 	int Action = 0, HitPos = 0, DmgPos, MobStart, MobLength;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+
+	*Damage = atoi(strpbrk(Line, "1234567890"));
 	while (YourHits[Action]) {
 		HitPos = (int)(strstr(Line, YourHits[Action]) - Line);
 		if (HitPos >= 0) break;
@@ -946,8 +950,8 @@ template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = atoi(strpbrk(Line, "1234567890"));
+
+	*Damage = atoi(strpbrk(Line, "1234567890"));
 	if (*Damage <= 0 || strstr(Line, " damage by "))
 		return false;
 	int MobEnd = (int)(strstr(Line, " has taken ") - Line);
@@ -1130,6 +1134,20 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		DPSWnd->SaveLoc();
 	else if (!_stricmp(Arg1, "listsize") && !WrongUI)
 		WriteChatf("\ayMobList Size: %i", MobList.size());
+	else if (!_stricmp(Arg1, "limit")) {
+		GetArg(Arg1, szLine, 2);
+		char *szEndPtr = nullptr;
+		errno = 0;
+		const int i = strtol(Arg1, &szEndPtr, 0);
+		// If out of range || extra stuff left || no conversion
+		if (errno == ERANGE || *szEndPtr != '\0' || Arg1 == szEndPtr || i <= 0) {
+			WriteChatf("\ar[MQ2DPSAdv] Invalid history limit");
+		}
+		else {
+			HistoryLimit = i;
+			WriteChatf("[MQ2DPSAdv] History limit set to %s", Arg1);
+		}
+	}
 	else if (!_stricmp(Arg1, "copy") && !WrongUI) {
 		char szCopy[MAX_STRING];
 		GetArg(szCopy, szLine, 2);
@@ -1204,6 +1222,7 @@ void DisplayHelp(PCHAR hTemp) {
 		WriteChatf("[DPSAdv]     mystop - Stops my DPS capture process");
 		WriteChatf("[DPSAdv]     myreset - Turns off my DPS capture and set myDPS totals to zero.");
 		WriteChatf("[DPSAdv]     tlo - get a list of the DPSAdv TLO members.");
+		WriteChatf("[DPSAdv]     limit - Limit the history of mobs in the DPS list.");
 	}
 	else if (!_stricmp(hTemp, "tlo")) {
 		WriteChatf("[DPSAdv] - DPSAdv TLO Members:");
@@ -1493,7 +1512,7 @@ PLUGIN_API VOID InitializePlugin()
 	if (IsXMLFilePresent("MQUI_DPSAdvWnd.xml")) {
 		AddXMLFile("MQUI_DPSAdvWnd.xml");
 	} else {
-		WriteChatf("MQ2DPSAdv:  Could not find MQUI_DPSAdvWnd.xml.  Please place in uifiles/default");
+		WriteChatf("[MQ2DPSAdv] Could not find MQUI_DPSAdvWnd.xml.  Please place in uifiles/default");
 	}
 	AddCommand("/dpsadv", DPSAdvCmd);
 	// additions for DPS Meter
@@ -1504,7 +1523,8 @@ PLUGIN_API VOID InitializePlugin()
 	MyActive = false;
 }
 
-PLUGIN_API VOID ShutdownPlugin() {
+PLUGIN_API VOID ShutdownPlugin()
+{
 	DestroyDPSWindow();
 	RemoveCommand("/dpsadv");
 	// additions for DPS Meter
@@ -1513,31 +1533,33 @@ PLUGIN_API VOID ShutdownPlugin() {
 	// Additions End
 }
 
-
-PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color) {
+PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color)
+{
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
 	if (Active || MyActive) {
 		if (Debug) {
-			char buffer[MAX_STRING] = { 0 };
-			sprintf_s(buffer, Line);
-			if (strchr(buffer, '\x12')) {
+			char szMsg[MAX_STRING] = { 0 };
+			strcpy_s(szMsg, Line);
+			if (strchr(szMsg, '\x12')) {
 				// Message includes link (item tags/spell), must clean first
-				int len = strlen(buffer);
-				if (char* szClean = (char*)LocalAlloc(LPTR, len + 64)) {
-					strncpy_s(szClean, len + 64, Line, len);
-					CXStr out;
+				const int len = strlen(szMsg);
+
+				auto pszCleanOrg = std::make_unique<char[]>(len + 64);
+				char* szClean = pszCleanOrg.get();
+
+				strcpy_s(szClean, len + 64, szMsg);
+
+				CXStr out;
 #if defined(ROF2EMU) || defined(UFEMU)
-					if (CXStr* str = CleanItemTags(&out, szClean)) {
+				if (CXStr* str = CleanItemTags(&out, szClean)) {
 #else
-					if (CXStr* str = CleanItemTags(&out, szClean, false)) {
+				if (CXStr* str = CleanItemTags(&out, szClean, false)) {
 #endif
-						GetCXStr(str->Ptr, szClean, len + 64);
-					}
-					strncpy_s(buffer, _countof(buffer), szClean, len + 64);
-					LocalFree(szClean);
-					}
+					GetCXStr(str->Ptr, szClean, len + 64);
 				}
-			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, buffer);
+				strncpy_s(szMsg, szClean, MAX_STRING - 1);
+			}
+			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, szMsg);
 		}
 		switch (Color) {
 		case 0://Color: 0 - Task Updates
@@ -1743,7 +1765,11 @@ void IntPulse() {
 	CurMaxMob = 0;
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
-		if ((!Mob->Active || ((Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive)) && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) {
+		if (Mob == nullptr // Somehow this was a null pointer
+		        || MobList.size() > static_cast<size_t>(HistoryLimit + 1) // We have exceeded the limit of mobs in the config (+1 due to display of the "Active" mob)
+		        || (!Mob->Active || (Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive) // It's not active or it's a pet/player/merc that's inactive?
+		        && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) // It's not one of our UI mobs
+		{
 			MobList.erase(MobList.begin() + i);
 			delete Mob;
 			i--;
@@ -1829,4 +1855,3 @@ PLUGIN_API VOID OnEndZone() {
 	Zoning = false;
 	CheckActive();
 }
-
