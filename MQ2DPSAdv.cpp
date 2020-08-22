@@ -1311,7 +1311,7 @@ public:
 		switch ((DpsAdvMembers)pMember->ID)
 		{
 		case MyDamage:
- 			Dest.Int64 = MyTotal;
+			Dest.Int64 = MyTotal;
 			Dest.Type = pInt64Type;
 			return true;
 
