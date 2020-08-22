@@ -1240,32 +1240,6 @@ void DestroyDPSWindow() {
 	CheckActive();
 }
 
-PLUGIN_API VOID SetGameState(DWORD GameState) {
-	if (GameState == GAMESTATE_INGAME) {
-		if (!DPSWnd) CreateDPSWindow();
-		// Name could change without the gamestate changing, but it's rare
-		if (GetCharInfo()) {
-			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-			if (pSpawn) {
-				strcpy_s(MyName, pSpawn->DisplayedName);
-				return;
-			}
-		}
-		// MyName is used for matching DPS and we don't want false positive matches.
-		strcpy_s(MyName, "NameNotFound");
-	}
-}
-
-PLUGIN_API VOID OnCleanUI()
-{
-	DestroyDPSWindow();
-}
-
-PLUGIN_API VOID OnReloadUI()
-{
-	if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow();
-}
-
 // ***********************************************************************************************************
 // Adding TLO for DPS Meter
 // ***********************************************************************************************************
@@ -1476,6 +1450,33 @@ BOOL dataDPSAdv(PCHAR szName, MQ2TYPEVAR &Dest)
 	Dest.DWord = 1;
 	Dest.Type = pDpsAdvType;
 	return true;
+}
+
+PLUGIN_API VOID SetGameState(DWORD GameState)
+{
+	if (GameState == GAMESTATE_INGAME) {
+		if (!DPSWnd) CreateDPSWindow();
+		// Name could change without the gamestate changing, but it's rare
+		if (GetCharInfo()) {
+			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+			if (pSpawn) {
+				strcpy_s(MyName, pSpawn->DisplayedName);
+				return;
+			}
+		}
+		// MyName is used for matching DPS and we don't want false positive matches.
+		strcpy_s(MyName, "NameNotFound");
+	}
+}
+
+PLUGIN_API VOID OnCleanUI()
+{
+	DestroyDPSWindow();
+}
+
+PLUGIN_API VOID OnReloadUI()
+{
+	if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow();
 }
 
 PLUGIN_API VOID InitializePlugin()
