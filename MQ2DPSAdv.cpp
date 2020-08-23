@@ -1,258 +1,32 @@
-// MQ2DPSAdv.cpp : Created by Warnen 2008-2009
-/*
- ### UPDATE THIS IF YOU MAKE A CHANGE ###
- == 10/20/19 == 1.3.00 (Chatwiththisname)
- Added comma delimited outputs, IE: 361,987,590 instead of 361987590 for the total dmg output.
- created two new functions. ReverseString(PCHAR szLine) and PutCommas(PCHAR szLine) to manipulate the strings.
- These should only be used just prior to output to the Listbox. This is now done by default.
-
- Added new checkbox in the settings menu. Use T B M K Numbers. Which allows for 2.9 mil, or 3.5 k, or 1.5 bil etc.
- outputs instead of 2,905,376 3,527 or 1,587,439,068 outputs to the DPS list.
- Updated the XML file for the above change.
-
- Changed where Anon was happening. It was happening during the entity creation instead of just anonymizing
- the string being written to the listbox for the name. I've changed, so now you can "/caption anon on" mid
- combat and it won't create a new entry in the listbox.
-
- == Unknown == 1.2.07 (Chatwiththisname)
- Add new column %, to show percentage of damage per entry (ShowTotal is an exception)
- Update .xml file
-
- == Unknown == 1.2.06 (Chatwiththisname)
- Add new column Time to show the length of time the entry has been engaged with the target.
- Update .xml file
-
- == 2/27/19 == 1.2.05 (Chatwiththisname)
- Added various checks throughout to avoid crashes
- Added Debug statements throughout while fixing crashes and left them for later reference if needed.
- Added "/dpsadv debug" toggle to toggle on and off the debug while in game.
- Added "Smashes" and "Smash" to the hits (Berserker pet did this, added to both as options just in case others can smash).
-
- == 1/19/19 == 1.2.05 (Chatwiththisname)
- Tried to categorize all Chat colors in comments
- Added Thorn and Fire based DS's
- Added Pet Non-Melee damage.
-
- == 1/6/19 == 1.2.04 (Chatwiththisname)
-Added 2 new colors for Others DoTs and Others Non-Melee
-Changed the color of your DoTs
-Fixed DoTs and Non-Melee Damage for self and others
-Added "shoot" for YourHits and "shoots" for OtherHits to parse.
-
-== 7/18/09 == 1.2.03 (Warnen)
-* Added handling for Your Pet filter.
-
-== 7/13/09 ==
-* Source made public
-
-== 3/13/09 == 1.2.02 (Warnen)
-* Fixed a bug that caused the plugin to keep parsing after closing the window and before zoning.
-* Fixed a crash related to charmed mobs.
-* New Colors: EntHover, EntHighlight.
-* /dpsadv copy - Untested - Will copy ini settings from a different char name.
-
-== 2/27/09 == 1.2.01 (Warnen)
-* Fixed a bug with settings not loading/assigning properly for first time.
-* Fixed/Improved code for zoning and removing pointers that may have caused decreased performance or crash.
-* Fixed a bug causing MaxDmg to include InActive if there were Active mobs.
-
-== 2/19/09 == 1.2.00 (Warnen)
-* SpawnStruct Implimentation; A Spawn is assigned to each Fight and Entity/Entry to pull information if found.
-* Settings Page: Various settings available.
-* Pet Support: First checks name for `s pet, then checks Master ID in Spawn. Entrys with pets are marked with a *.
-* Pets no longer show as Fights.
-* Coloring Support: Option to use Raid Coloring for PC Classes. Other colors setable in INI. See Main Post.
-* Mercenary Support: Mercenary's will not show up as a Fight. When displayed as Entry, they are indicated by [M] and Utilize Coloring.
-* Option to Show yourself at the Top of the list.
-* Option to show Total Damage at Top (Above/Below ShowMeTop), or Bottom of list.
-* Several Code Changes / Improvements.
-This update includes UI XML Changes. Make sure you replace the old UI File.
-
-== 2/13/09 == 1.1.04b (Warnen)
-* Updated for new zip.
-
-== 2/12/09 == 1.1.04 (Warnen)
-* Updated for patch.
-
-== 2/04/09 == 1.1.03 (Warnen)
-* Fixed some Performance Code being skipped.
-* Added /dpsadv show command to re-show the window.
-* The window will save its open/closed status in INI File now.
-* Version now showed in the Window Title.
-
-== 2/03/09 == 1.1.02 (Warnen)
-* Crash bug fix.
-
-== 2/03/09 == 1.1.01 (Warnen)
-* Fixed fight list combo box updating in a loop.
-
-== 2/03/09 == 1.1 (Warnen)
-* Release
-
-*/
+// DPS ADV CREATED BY WARNEN 2008-2009
+// MQ2DPSAdv.cpp
 
 #include <mq/Plugin.h>
+#include "MQ2DPSAdv.h"
 
 PreSetup("MQ2DPSAdv");
-PLUGIN_VERSION(1.3);
+PLUGIN_VERSION(1.5);
 
-char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", 0 };
-char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", 0 };
-enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
-enum { NOTOTAL, TOTALABOVE, TOTALSECOND, TOTALBOTTOM };
-
-PSPAWNINFO CurTarget;
-time_t Intervals;
-int CListType;
-int MaxDmgLast;
-int MeColor;
-int MeTopColor;
-int NormalColor;
-int NPCColor;
-int TotalColor;
-int EntHover;
-int EntHighlight;
-int FightNormal;
-int FightHover;
-int FightHighlight;
-int FightActive;
-int FightInActive;
-int FightDead;
-bool Saved;
-bool WarnedYHO, WarnedOHO;
-bool Debug;
-bool Active;
-bool Zoning;
-bool WrongUI;
-bool ShowMeTop;
-bool ShowMeMin;
-int ShowMeMinNum;
-bool UseRaidColors;//Use colors from set raid colors for each class display.
-bool LiveUpdate;//Update Total/DPS/Time/% as it happens instead of a set pulse.
-int ShowTotal;
-int FightIA;//Fight Inactive.
-int FightTO;//Fight Timeout.
-int EntTO;//Entity Timeout.
-bool UseTBMKOutputs = false;//Intended to show 1.4t, 1.5m, 343k etc outputs for total and DPS.
-
-struct EntDamage {
-	uint64_t Total;
-	time_t First;
-	time_t Last;
-	int AddTime;
-};
-
-class DPSMob {
-public:
-	class DPSEntry {
-	public:
-		char Name[64];
-		bool DoSort;
-		bool Pets;
-		bool CheckPetName;
-		bool UsingPetName;
-		int SpawnType;
-		int Class;
-		bool Mercenary;
-		EntDamage Damage;
-		DPSMob* Parent;
-		PSPAWNINFO Spawn;
-		DPSEntry* Master;
-
-		DPSEntry();
-		DPSEntry(char EntName[64], DPSMob* pParent);
-		void Init();
-		void AddDamage(int aDamage);
-		unsigned long long GetDPS();
-		unsigned long long GetSDPS();
-		void Sort();
-		void GetSpawn();
-		bool CheckMaster();
-	};
-
-	char Name[64];
-	char Tag[8];
-	int SpawnType;
-	PSPAWNINFO Spawn;
-	bool Active;
-	bool InActive;
-	bool Dead;
-	bool PetName;
-	bool Mercenary;
-	EntDamage Damage;
-	DPSEntry* LastEntry;
-	std::vector<DPSEntry*> EntList;
-
-	DPSMob();
-	DPSMob(const char* MobName, size_t MobLen);
-	void Init();
-	void AddDamage(int aDamage);
-	void GetSpawn();
-	bool IsPet();
-	DPSEntry* GetEntry(char EntName[64], bool Create = true);
-};
-
-std::vector<DPSMob*> MobList;
-DPSMob* LastMob;
-DPSMob* CurTarMob;
-DPSMob* CurListMob;
-DPSMob* CurMaxMob;
-
-class CDPSAdvWnd : public CCustomWnd {
-public:
-	CTabWnd* Tabs;
-	CListWnd* LTopList;
-	CComboWnd* CMobList;
-	CCheckBoxWnd* CShowMeTop;
-	CCheckBoxWnd* CShowMeMin;
-	CEditWnd* TShowMeMin;
-	CCheckBoxWnd* CUseRaidColors;
-	CCheckBoxWnd* CLiveUpdate;
-	CCheckBoxWnd* CUseTBMKOutput;
-	CEditWnd* TFightIA;
-	CEditWnd* TFightTO;
-	CEditWnd* TEntTO;
-	CComboWnd* CShowTotal;
-	bool ReSort;
-
-	CDPSAdvWnd();
-	~CDPSAdvWnd();
-	void DrawList(bool DoDead = false);
-	void SetTotal(int LineNum, DPSMob* Mob);
-	void DrawCombo();
-	void LoadLoc(char szChar[64] = 0);
-	void LoadSettings();
-	void SaveLoc();
-	void SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total = false, bool MeTop = false);
-	int WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown);
-	void SaveSetting(PCHAR Key, PCHAR Value, ...);
-
-};
-CDPSAdvWnd* DPSWnd = 0;
-
-void CheckActive() {
-	if (DPSWnd && DPSWnd->IsVisible() && !Zoning && !WrongUI) Active = true;
-	else Active = false;
-}
+// ############################### DPSEntry Start ############################################
 
 DPSMob::DPSEntry::DPSEntry() {
 	Init();
 }
 
-DPSMob::DPSEntry::DPSEntry(CHAR EntName[256], DPSMob* pParent) {
+DPSMob::DPSEntry::DPSEntry(CHAR EntName[], DPSMob* pParent, bool PCOnly /* = false */) {
 	Init();
 	Parent = pParent;
 	strcpy_s(Name, EntName);
-	GetSpawn();
+	GetSpawn(PCOnly);
 }
 
 void DPSMob::DPSEntry::Init() {
-	Parent = 0;
+	Parent = nullptr;
 	SpawnType = -1;
 	Mercenary = false;
 	Class = 0;
-	Spawn = 0;
-	Master = 0;
+	Spawn = nullptr;
+	Master = nullptr;
 	DoSort = false;
 	Pets = false;
 	CheckPetName = false;
@@ -264,10 +38,10 @@ void DPSMob::DPSEntry::Init() {
 	Damage.AddTime = 0;
 }
 
-void DPSMob::DPSEntry::GetSpawn() {
+void DPSMob::DPSEntry::GetSpawn(bool PCOnly /* = false */) {
 	PSPAWNINFO pSpawn = (PSPAWNINFO)pSpawnList;
 	while (pSpawn) {
-		if (!_stricmp(pSpawn->DisplayedName, Name)) {
+		if (!_stricmp(pSpawn->DisplayedName, Name) && (!PCOnly || pSpawn->Type == SPAWN_PLAYER)) {
 			if (pSpawn->Type != SPAWN_CORPSE) {
 				Spawn = pSpawn;
 				SpawnType = Spawn->Type;
@@ -297,56 +71,57 @@ bool DPSMob::DPSEntry::CheckMaster() {
 			return true;
 		}
 	}
-	if (Master && (!Spawn || Spawn->MasterID <= 0 || !Master->Spawn || Master->Spawn->SpawnID != Spawn->MasterID)) Master = 0;
-	if (Master) return true;
-	else if (Spawn && Spawn->MasterID > 0) {
+	if (Master != nullptr && (Spawn == nullptr || Spawn->MasterID <= 0 || Master->Spawn == nullptr || Master->Spawn->SpawnID != Spawn->MasterID)) Master = nullptr;
+	if (Master != nullptr) return true;
+	if (Spawn && Spawn->MasterID > 0) {
 		PSPAWNINFO NewMaster = (PSPAWNINFO)GetSpawnByID(Spawn->MasterID);
 		if (NewMaster) {
-			Master = Parent->GetEntry(NewMaster->DisplayedName);
-			return true;
+			Master = Parent->GetEntry(NewMaster->DisplayedName, true, true);
+			return Master != nullptr;
 		}
 	}
 	return false;
 }
 
-void DPSMob::DPSEntry::AddDamage(int aDamage) {
+void DPSMob::DPSEntry::AddDamage(int Damage1) {
 	if (CheckMaster()) {
 		Master->Pets = true;
-		Master->AddDamage(aDamage);
+		Master->AddDamage(Damage1);
 		DoSort = true;
 		return;
 	}
+
 	DoSort = true;
-	if (Damage.First && (time(nullptr) - Damage.Last >= EntTO)) {
+	time_t timenow = time(nullptr);
+
+	if (Damage.First && (timenow - Damage.Last >= EntTO)) {
 		Damage.AddTime += (int)(Damage.Last - Damage.First) + 1;
 		Damage.First = 0;
 	}
-	Damage.Total += aDamage;
-	Damage.Last = time(nullptr);
-	if (!Damage.First) Damage.First = time(nullptr);
-	Parent->AddDamage(aDamage);
+
+	Damage.Total += Damage1;
+	if (!Damage.First)
+		Damage.First = timenow;
+
+	Damage.Last = timenow;
+
+	Parent->AddDamage(Damage1);
 }
 
-unsigned long long DPSMob::DPSEntry::GetDPS() {
-	//Damage.Total is:		475082
-	//Damage.Last is:		1580130211
-	//Damage.First is:		1580130212
-	//Damage.AddTime is:	0
-	//below code fixes this corner case scenario. -eqmule
-	int64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
+uint64_t DPSMob::DPSEntry::GetDPS() {
+	uint64_t dividetotal = (((Damage.Last - Damage.First) + 1) + Damage.AddTime);
 	if (dividetotal == 0)
-	{
-		dividetotal++;
-	}
-	return (int64_t)(Damage.Total / dividetotal);
+		return 0;
+
+	return (Damage.Total / dividetotal);
 }
 
-unsigned long long DPSMob::DPSEntry::GetSDPS() {
-	auto val = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
-	if (val == 0)
+uint64_t DPSMob::DPSEntry::GetSDPS() {
+	uint64_t dividetotal = ((CurListMob->Damage.Last - CurListMob->Damage.First) + 1) + CurListMob->Damage.AddTime;
+	if (dividetotal == 0)
 		return 0;
-	//why is this cast to an int?
-	return (int)(Damage.Total / val);
+
+	return (Damage.Total / dividetotal);
 }
 
 void DPSMob::DPSEntry::Sort() {
@@ -411,7 +186,7 @@ void DPSMob::GetSpawn() {
 				Dead = false;
 				return;
 			}
-			else Dead = true;
+			Dead = true;
 		}
 		pSpawn = pSpawn->pNext;
 	}
@@ -422,39 +197,48 @@ bool DPSMob::IsPet() {
 	return PetName || (Spawn && Spawn->MasterID > 0);
 }
 
-void DPSMob::AddDamage(int aDamage) {
-	Damage.Total += aDamage;
-	Damage.Last = time(nullptr);
-	if (!Damage.First) Damage.First = time(nullptr);
+void DPSMob::AddDamage(int Damage1) {
+	Damage.Total += Damage1;
+	time_t timenow = time(nullptr);
+
+	if (!Damage.First)
+		Damage.First = timenow;
+
+	Damage.Last = timenow;
+
 	if (!Active) {
 		Active = true;
 		sprintf_s(Tag, "[A] ");
-		if (!IsPet() && !Mercenary) DPSWnd->DrawCombo();
+
+		if (!IsPet() && !Mercenary)
+			DPSWnd->DrawCombo();
 	}
 }
 
-DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[256], bool Create) {
+DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[], bool Create /* = true */, bool PCOnly /* = false */) {
 	char szBuffer[256] = { 0 };
 	strcpy_s(szBuffer, 256, EntName);
 	if (!_stricmp(szBuffer, "You")) {
 		strcpy_s(szBuffer, 256, ((PSPAWNINFO)pLocalPlayer)->Name);
 	}
-	if (LastEntry && !strcmp(LastEntry->Name, szBuffer)) return LastEntry;
-	else {
-		if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
-		for (int i = 0; i < (int)EntList.size(); i++) {
-			if (!strcmp(EntList[i]->Name, szBuffer)) {
-				LastEntry = EntList[i];
-				return LastEntry;
-			}
+
+	if (LastEntry && !strcmp(LastEntry->Name, szBuffer) && (!PCOnly || LastEntry->SpawnType == SPAWN_PLAYER)) return LastEntry;
+
+	if (LastEntry && LastEntry->DoSort) LastEntry->Sort();
+	// TODO: This and other areas like this should probably be range based for loops.
+	for (int i = 0; i < (int)EntList.size(); i++) {
+		if (EntList[i] != nullptr && !strcmp(EntList[i]->Name, szBuffer) && (!PCOnly || EntList[i]->SpawnType == SPAWN_PLAYER)) {
+			LastEntry = EntList[i];
+			return LastEntry;
 		}
 	}
+
 	if (Create) {
-		LastEntry = new DPSEntry(szBuffer, this);
+		LastEntry = new DPSEntry(szBuffer, this, PCOnly);
 		EntList.push_back(LastEntry);
 		return LastEntry;
 	}
-	return 0;
+	return nullptr;
 }
 
 // ############################### CDPSAdvWnd START ############################################
@@ -480,11 +264,6 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	//DPS Tab
 	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
 	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
-
-
-
-
-
 
 	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
 
@@ -514,9 +293,9 @@ void CDPSAdvWnd::DrawCombo() {
 	CMobList->InsertChoice(szTemp);
 
 
-	DPSMob* Mob = 0;
-	int i = 0, ListSize = 0;
-	for (i = 0; i < (int)MobList.size(); i++) {
+	DPSMob* Mob = nullptr;
+	int ListSize = 0;
+	for (int i = 0; i < (int)MobList.size(); ++i) {
 		Mob = MobList[i];
 		if (Mob->SpawnType == 1 && Mob->Active && !Mob->IsPet() && !Mob->Mercenary) {
 			ListSize++;
@@ -532,26 +311,35 @@ void CDPSAdvWnd::DrawCombo() {
 	else CMobList->SetChoice(CurSel >= 0 ? CurSel : 0);
 }
 
-void ReverseString(char* szLine) {
-	std::string temp2 = szLine;
-	std::reverse(temp2.rbegin(), temp2.rend());
-	sprintf_s(szLine, MAX_STRING, temp2.c_str());
-}
-
-void PutCommas(char* szLine) {
-	ReverseString(szLine);
-	unsigned int j = 0;
-	char temp[MAX_STRING] = { 0 };
-	for (unsigned int i = 0; i < strlen(szLine) + 1; i++) {
-		if (i % 3 == 0 && i != 0 && i != strlen(szLine)) {
-			temp[j] = ',';
-			j++;
-		}
-		temp[j] = szLine[i];
-		j++;
+void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
+	CHAR szTemp[MAX_STRING] = { 0 };
+	SetLineColors(LineNum, 0, true);
+	//Index
+	LTopList->SetItemText(LineNum, 0, "-");
+	//Name
+	LTopList->SetItemText(LineNum, 1, "Total");
+	//Total
+	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
+	if (!UseTBMKOutputs)
+		PrettifyNumber(szTemp, sizeof(szTemp));
+	else {
+		MakeItTBMK(szTemp);
+		//Need to turn the strings from like 125556 to 125.5k
 	}
-	sprintf_s(szLine, MAX_STRING, temp);
-	ReverseString(szLine);
+	LTopList->SetItemText(LineNum, 2, szTemp);
+	//DPS
+	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
+	if (!UseTBMKOutputs)
+		PrettifyNumber(szTemp, sizeof(szTemp));
+	else {
+		MakeItTBMK(szTemp);
+		//Need to turn the strings from like 125556 to 125.5k
+	}
+	LTopList->SetItemText(LineNum, 3, szTemp);
+	//Time
+	sprintf_s(szTemp, "%I64is", CurListMob->Damage.Last - CurListMob->Damage.First);
+	LTopList->SetItemText(LineNum, 4, szTemp);
+	//This is where Percentage would go, if it wasn't always going to be 100%, if more columns are added, make sure to skip 5!
 }
 
 void MakeItTBMK(char* szLine) {
@@ -590,43 +378,11 @@ void MakeItTBMK(char* szLine) {
 	}
 }
 
-void CDPSAdvWnd::SetTotal(int LineNum, DPSMob* Mob) {
-	CHAR szTemp[MAX_STRING] = { 0 };
-	SetLineColors(LineNum, 0, true);
-	//Index
-	LTopList->SetItemText(LineNum, 0, "-");
-	//Name
-	LTopList->SetItemText(LineNum, 1, "Total");
-	//Total
-	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total);
-	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
-	else {
-		MakeItTBMK(szTemp);
-		//Need to turn the strings from like 125556 to 125.5k
-	}
-	LTopList->SetItemText(LineNum, 2, szTemp);
-	//DPS
-	sprintf_s(szTemp, "%llu", CurListMob->Damage.Total / (int)((CurListMob->Damage.Last - CurListMob->Damage.First) + 1));
-	if (!UseTBMKOutputs)
-		PutCommas(szTemp);
-	else {
-		MakeItTBMK(szTemp);
-		//Need to turn the strings from like 125556 to 125.5k
-	}
-	LTopList->SetItemText(LineNum, 3, szTemp);
-	//Time
-	sprintf_s(szTemp, "%I64us", static_cast<uint64_t>(CurListMob->Damage.Last) - static_cast<uint64_t>(CurListMob->Damage.First));
-	LTopList->SetItemText(LineNum, 4, szTemp);
-	//This is where Percentage would go, if it wasn't always going to be 100%, if more columns are added, make sure to skip 5!
-}
-
 void CDPSAdvWnd::DrawList(bool DoDead) {
 	if (!CurListMob || (!DoDead && CurListMob->Dead)) return;
 	int ScrollPos = LTopList->GetVScrollPos();
 	int CurSel = LTopList->GetCurSel();
 	CHAR szTemp[MAX_STRING] = { 0 };
-	unsigned int j = 0;
 	LTopList->DeleteAll();
 	int i = 0, LineNum = 0, RankAdj = 0, ShowMeLineNum = 0;
 	bool FoundMe = false, ThisMe = false;
@@ -665,7 +421,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		//Total Damage
 		sprintf_s(szTemp, "%llu", Ent->Damage.Total);
 		if (!UseTBMKOutputs)
-			PutCommas(szTemp);
+			PrettifyNumber(szTemp, sizeof(szTemp));
 		else {
 			MakeItTBMK(szTemp);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -676,7 +432,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char DPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(DPSoutput, "%llu", Ent->GetDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(DPSoutput);
+			PrettifyNumber(DPSoutput, sizeof(DPSoutput));
 		else {
 			MakeItTBMK(DPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -686,7 +442,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		char SDPSoutput[MAX_STRING] = { 0 };
 		sprintf_s(SDPSoutput, "%llu", Ent->GetSDPS());
 		if (!UseTBMKOutputs)
-			PutCommas(SDPSoutput);
+			PrettifyNumber(SDPSoutput, sizeof(SDPSoutput));
 		else {
 			MakeItTBMK(SDPSoutput);
 			//Need to turn the strings from like 125556 to 125.5k
@@ -695,7 +451,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		LTopList->SetItemText(LineNum, 3, szTemp);
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 3, szTemp);
 		//Time
-		sprintf_s(szTemp, "%I64us", static_cast<uint64_t>(Ent->Damage.Last) - static_cast<uint64_t>(Ent->Damage.First));
+		sprintf_s(szTemp, "%I64is", Ent->Damage.Last - Ent->Damage.First);
 		LTopList->SetItemText(LineNum, 4, szTemp);
 		if (ThisMe) LTopList->SetItemText(ShowMeLineNum, 4, szTemp);
 		//Percentage of Damage
@@ -759,7 +515,9 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 }
 
 void CDPSAdvWnd::SaveLoc() {
-	if (!GetCharInfo()) return;
+	if (!GetCharInfo() || GetCharInfo()->Name[0] == '\0')
+		return;
+
 	CHAR szTemp[MAX_STRING] = { 0 };
 	WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
 	sprintf_s(szTemp, "%i", GetLocation().top);
@@ -798,6 +556,8 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
+	sprintf_s(szTemp, "%i", HistoryLimit ? 1 : 0);
+	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
 
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
@@ -881,6 +641,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	FightInActive = GetPrivateProfileInt(szName, "FightInActive", 0xFF777777, INIFileName);
 	FightDead = GetPrivateProfileInt(szName, "FightDead", 0xFF330000, INIFileName);
 	UseTBMKOutputs = (GetPrivateProfileInt(szName, "UseTBMKOutputs", 0, INIFileName) > 0 ? true : false);
+	HistoryLimit = GetPrivateProfileInt(szName, "HistoryLimit", 25, INIFileName);
 
 	//Restore the column widths
 	for (int i = 0; i <= 5; i++) {
@@ -895,19 +656,10 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	if (FightIA < 3) FightIA = 8;
 	if (FightTO < 3) FightTO = 30;
 	if (EntTO < 3) EntTO = 8;
-	if (Debug) gSpewToFile = true;
 	if (CListType > 1) CListType = CLISTTARGET;
 	LTopList->SetColors(NormalColor, EntHover, EntHighlight);
 	CMobList->SetChoice(CListType);
 	LoadSettings();
-}
-
-void ListSwitch(DPSMob* Switcher) {
-	CurListMob = Switcher;
-	DPSWnd->LTopList->SetCurSel(-1);
-	DPSWnd->LTopList->SetVScrollPos(0);
-	DPSWnd->DrawList(true);
-	DPSWnd->DrawCombo();
 }
 
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
@@ -1012,8 +764,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 	int HitPos = 0, Action = 0;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
+
+	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	while (OtherHits[Action]) {
 		HitPos = (int)(strstr(Line, OtherHits[Action]) - Line);
 		if (HitPos > 0)
@@ -1044,8 +796,8 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, c
 	int Action = 0, HitPos = 0, DmgPos, MobStart, MobLength;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
+
+	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	while (YourHits[Action]) {
 		HitPos = (int)(strstr(Line, YourHits[Action]) - Line);
 		if (HitPos >= 0) break;
@@ -1179,8 +931,8 @@ template <unsigned int _MobSize>bool SplitStringDeath(const char* Line, char(&Mo
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	else
-		*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
+
+	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	if (*Damage <= 0 || strstr(Line, " damage by "))
 		return false;
 	int MobEnd = (int)(strstr(Line, " has taken ") - Line);
@@ -1214,6 +966,47 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const
 	return true;
 }
 
+void AddMyDamage(char* EntName, int Damage1) {
+	//if Me Do this
+	uint64_t MyTotalBefore = MyTotal;
+	uint64_t MyPetTotalBefore = MyPetTotal;
+	time_t timenow = time(nullptr);
+	int flag1 = 0;
+	if ((!_stricmp(MyName, EntName) || !_stricmp(EntName, "You"))
+		|| (strstr(EntName, "`s pet") && strstr(EntName, MyName))) {
+		if (MyDebug) WriteChatf("[AddMyDamage] 1 -%s-", EntName);
+		if (!MyFirst) MyFirst = timenow;
+		MyLast = timenow;
+		if (!_stricmp(MyName, EntName) || !_stricmp(EntName, "You")) {
+			MyTotal += Damage1;
+			flag1 = 1;
+		}
+		else {
+			MyPetTotal += Damage1;
+			flag1 = 2;
+		}
+	}
+	// If I have a pet is it my pet
+	else {
+		PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+		if (pSpawn && pSpawn->PetID != -1) {
+			int iPetID = pSpawn->PetID;
+			if (MyDebug) WriteChatf("[AddMyDamage] 3 -%s- -%s- %i", EntName, MyName, iPetID);
+			if (PSPAWNINFO dPet = (PSPAWNINFO)GetSpawnByID(iPetID)) {
+				if (MyDebug) WriteChatf("[AddMyDamage] 4 -%s-", dPet->DisplayedName);
+				if (!_stricmp(dPet->DisplayedName, EntName)) {
+					if (MyDebug) WriteChatf("[AddMyDamage] 5 %i", Damage1);
+					if (!MyFirst) MyFirst = timenow;
+					MyLast = timenow;
+					MyPetTotal += Damage1;
+					flag1 = 3;
+				}
+			}
+		}
+	}
+	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %lu A: %lu  Pet B: %lu A: %lu Flag: %i", EntName, Damage1, MyTotalBefore, MyTotal, MyPetTotalBefore, MyPetTotal, flag1);
+}
+
 void HandleNonMelee(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
@@ -1221,7 +1014,8 @@ void HandleNonMelee(const char* Line) {
 	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[HandleNonMelee] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleDOT(const char* Line) {
@@ -1231,7 +1025,8 @@ void HandleDOT(const char* Line) {
 	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[HandleDot] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleOtherHitOther(const char* Line) {
@@ -1240,11 +1035,14 @@ void HandleOtherHitOther(const char* Line) {
 	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[OtherHitOther] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
-	if (DPSMob* mob = GetMob(MobName, true, true)) {
-		if (DPSMob::DPSEntry* entry = mob->GetEntry(EntName)) {
-			entry->AddDamage(Damage);
+	if (Active) {
+		if (DPSMob* mob = GetMob(MobName, true, true)) {
+			if (DPSMob::DPSEntry* entry = mob->GetEntry(EntName)) {
+				entry->AddDamage(Damage);
+			}
 		}
 	}
+	if (MyActive) AddMyDamage(EntName, Damage);
 }
 
 void HandleYouHitOther(const char* Line) {
@@ -1254,12 +1052,30 @@ void HandleYouHitOther(const char* Line) {
 		return;
 	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
 	if (pCharSpawn) {
-		if (DPSMob* mob = GetMob(MobName, true, true)) {
-			if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
-				entry->AddDamage(Damage);
+		if (Active) {
+			if (DPSMob* mob = GetMob(MobName, true, true)) {
+				if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+					entry->AddDamage(Damage);
+				}
+			}
+		}
+		if (MyActive) AddMyDamage(MyName, Damage);
+	}
+}
+
+void HandleDeath(const char* Line) {
+	char MobName[256] = { 0 };
+	if (!SplitStringDeath(Line, MobName)) return;
+	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
+	if (Active) {
+		if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
+			HandleDeath(DeadMob);
+			if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
+				DPSWnd->DrawCombo();
 			}
 		}
 	}
+	if (MyActive) MyActive = false;
 }
 
 void HandleDeath(DPSMob* DeadMob) {
@@ -1277,18 +1093,6 @@ void HandleDeath(DPSMob* DeadMob) {
 	}
 	sprintf_s(DeadMob->Tag, "[D] ");
 	DeadMob->Dead = true;
-}
-
-void HandleDeath(const char* Line) {
-	char MobName[256] = { 0 };
-	if (!SplitStringDeath(Line, MobName)) return;
-	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
-	if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
-		HandleDeath(DeadMob);
-		if (!DeadMob->IsPet() && !DeadMob->Mercenary) {
-			DPSWnd->DrawCombo();
-		}
-	}
 }
 
 void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
@@ -1311,6 +1115,17 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		DPSWnd->SaveLoc();
 	else if (!_stricmp(Arg1, "listsize") && !WrongUI)
 		WriteChatf("\ayMobList Size: %i", MobList.size());
+	else if (!_stricmp(Arg1, "limit")) {
+		GetArg(Arg1, szLine, 2);
+		const int i = GetIntFromString(Arg1, 0);
+		if (i <= 0) {
+			WriteChatf("\ar[MQ2DPSAdv] Invalid history limit");
+		}
+		else {
+			HistoryLimit = i;
+			WriteChatf("[MQ2DPSAdv] History limit set to %s", Arg1);
+		}
+	}
 	else if (!_stricmp(Arg1, "copy") && !WrongUI) {
 		char szCopy[MAX_STRING];
 		GetArg(szCopy, szLine, 2);
@@ -1318,12 +1133,97 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 			DPSWnd->LoadLoc(szCopy);
 			DPSWnd->SaveLoc();
 		}
-		else 
+		else
 			WriteChatf("\arFailed to Copy: DPS Window not loaded.");
 	}
 	else if (!_stricmp(Arg1, "Debug")) {
 		Debug = Debug ? false : true;
 		WriteChatf("Debug is now: %s", Debug ? "\agOn" : "\arOff");
+	}
+	else if (!_stricmp(Arg1, "MyDebug")) {
+		MyDebug = MyDebug ? false : true;
+		WriteChatf("MyDebug is now: %s", MyDebug ? "\agOn" : "\arOff");
+	}
+	else if (!_stricmp(Arg1, "MyStart")) {
+		MyFirst = 0;
+		MyLast = 0;
+		MyTime = 0;
+		MyTotal = 0;
+		MyPetTotal = 0;
+		MyDPSValue = 0;
+		MyPetDPS = 0;
+		TotalDPSValue = 0;
+		MyActive = true;
+	}
+	else if (!_stricmp(Arg1, "MyStop")) {
+		if (MyActive) {
+			MyLast = time(nullptr);
+			MyActive = false;
+			MyTime = (MyLast - MyFirst);
+			MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
+			MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
+			TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
+		}
+	}
+	else if (!_stricmp(Arg1, "MyReset")) {
+		MyActive = false;
+		MyFirst = 0;
+		MyLast = 0;
+		MyTime = 0;
+		MyTotal = 0;
+		MyPetTotal = 0;
+		MyDPSValue = 0;
+		MyPetDPS = 0;
+		TotalDPSValue = 0;
+	}
+	else if (!_stricmp(Arg1, "tlo")) {
+		DisplayHelp("tlo");
+	}
+	else {
+		DisplayHelp("dps");
+	}
+	CheckActive();
+}
+
+void DisplayHelp(const char* hTemp) {
+	if (!_stricmp(hTemp, "dps")) {
+		WriteChatf("[DPSAdv] - Valid Commands are:");
+		WriteChatf("[DPSAdv]     show - Opens DPSAdv Window.");
+		WriteChatf("[DPSAdv]     colors - switch to Raid tab in Window.");
+		WriteChatf("[DPSAdv]     reload - reload your ini settings.");
+		WriteChatf("[DPSAdv]     save - Save your current settings to ini.");
+		WriteChatf("[DPSAdv]     listsize - displays the number of mobs in the DPS list.");
+		WriteChatf("[DPSAdv]     copy - Copy the DPS window.");
+		WriteChatf("[DPSAdv]     debug - Toggles on/off debug messages.");
+		WriteChatf("[DPSAdv]     mydebug - Toggles on/off myDPS debug messages");
+		WriteChatf("[DPSAdv]     mystart - Starts My DPS capture process.");
+		WriteChatf("[DPSAdv]     mystop - Stops my DPS capture process");
+		WriteChatf("[DPSAdv]     myreset - Turns off my DPS capture and set myDPS totals to zero.");
+		WriteChatf("[DPSAdv]     tlo - get a list of the DPSAdv TLO members.");
+		WriteChatf("[DPSAdv]     limit - Limit the history of mobs in the DPS list.");
+	}
+	else if (!_stricmp(hTemp, "tlo")) {
+		WriteChatf("[DPSAdv] - DPSAdv TLO Members:");
+		WriteChatf("[DPSAdv]    MyDamage - My Damage as a number");
+		WriteChatf("[DPSAdv]    PetDamage - My pet Damage as a number");
+		WriteChatf("[DPSAdv]    TotalDamage - My Damage and Pet Damage together as a number");
+		WriteChatf("[DPSAdv]    MyDPS - My DPS as a number");
+		WriteChatf("[DPSAdv]    PetDPS - My pet DPS as a number");
+		WriteChatf("[DPSAdv]    TotalDPS - My DPS and pet DPS together as a number");
+		WriteChatf("[DPSAdv]    TimeElapsed - Number in seconds of time of fight");
+	}
+}
+
+void CreateDPSWindow() {
+	if (DPSWnd) DestroyDPSWindow();
+	if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
+		DPSWnd = new CDPSAdvWnd();
+		if (DPSWnd->IsVisible()) {
+			((CXWnd*)DPSWnd)->Show(1, 1);
+		}
+		char szTitle[MAX_STRING];
+		sprintf_s(szTitle, "DPS Advanced v%.1f", MQ2Version);
+		DPSWnd->SetWindowText(szTitle);
 	}
 	CheckActive();
 }
@@ -1337,25 +1237,231 @@ void DestroyDPSWindow() {
 	CheckActive();
 }
 
-void CreateDPSWindow() {
-	if (DPSWnd) DestroyDPSWindow();
-	if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
-		DPSWnd = new CDPSAdvWnd();
-		if (DPSWnd->IsVisible()) {
-			((CXWnd*)DPSWnd)->Show(1, 1);
-		}
-		char szTitle[MAX_STRING];
-		sprintf_s(szTitle, "DPS Advanced v%0.2f", MQ2Version);
-		DPSWnd->SetWindowText(szTitle);
+// ***********************************************************************************************************
+// Adding TLO for DPS Meter
+// ***********************************************************************************************************
+
+class MQ2DPSAdvType : public MQ2Type
+{
+public:
+	enum DpsAdvMembers {
+		MyDamage = 1,
+		PetDamage,
+		TotalDamage,
+		MyDPS,
+		PetDPS,
+		TotalDPS,
+		TimeElapsed,
+		MyStatus,
+		MyPetID
+	};
+
+	MQ2DPSAdvType() :MQ2Type("DPSAdv")
+	{
+		TypeMember(MyDamage);
+		TypeMember(PetDamage);
+		TypeMember(TotalDamage);
+		TypeMember(MyDPS);
+		TypeMember(PetDPS);
+		TypeMember(TotalDPS);
+		TypeMember(TimeElapsed);
+		TypeMember(MyStatus);
+		TypeMember(MyPetID);
 	}
-	CheckActive();
+
+	~MQ2DPSAdvType()
+	{
+	}
+
+	virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
+	{
+		MQTypeMember* pMember = MQ2DPSAdvType::FindMember(Member);
+		if (!pMember)
+			return false;
+
+		switch ((DpsAdvMembers)pMember->ID)
+		{
+		case MyDamage:
+			Dest.Int64 = MyTotal;
+			Dest.Type = mq::datatypes::pInt64Type;
+			return true;
+
+		case PetDamage:
+			Dest.Int64 = MyPetTotal;
+			Dest.Type = mq::datatypes::pInt64Type;
+			return true;
+
+		case TotalDamage:
+			Dest.Int64 = MyTotal + MyPetTotal;
+			Dest.Type = mq::datatypes::pInt64Type;
+			return true;
+
+		case MyDPS:
+			if (MyActive) {
+				if (MyTotal > 0 && MyFirst > 0) {
+					MyTime = time(nullptr) - MyFirst;
+					MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
+				}
+				else {
+					MyTime = 0;
+					MyDPSValue = 0;
+				}
+			}
+			else {
+				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					MyDPSValue = MyTime ? (float)MyTotal / MyTime : MyTotal;
+				}
+				else {
+					MyTime = 0;
+					MyDPSValue = 0;
+				}
+
+			}
+
+			Dest.Float = MyDPSValue;
+			Dest.Type = mq::datatypes::pFloatType;
+			return true;
+
+		case PetDPS:
+			if (MyActive) {
+				if (MyPetTotal > 0 && MyFirst > 0) {
+					MyTime = time(nullptr) - MyFirst;
+					MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					MyPetDPS = 0;
+				}
+			}
+			else {
+				if (MyPetTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					MyPetDPS = MyTime ? (float)MyPetTotal / MyTime : MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					MyPetDPS = 0;
+				}
+			}
+
+			Dest.Float = MyPetDPS;
+			Dest.Type = mq::datatypes::pFloatType;
+			return true;
+
+		case TotalDPS:
+			if (MyActive) {
+				if (MyTotal > 0 && MyFirst > 0) {
+					MyTime = time(nullptr) - MyFirst;
+					TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					TotalDPSValue = 0;
+				}
+			}
+			else {
+				if (MyTotal > 0 && MyFirst > 0 && MyLast > 0) {
+					MyTime = MyLast - MyFirst;
+					TotalDPSValue = MyTime ? (float)(MyTotal + MyPetTotal) / MyTime : MyTotal + MyPetTotal;
+				}
+				else {
+					MyTime = 0;
+					TotalDPSValue = 0;
+				}
+			}
+
+			Dest.Float = TotalDPSValue;
+			Dest.Type = mq::datatypes::pFloatType;
+			return true;
+
+		case TimeElapsed:
+			if (MyActive) {
+				if (MyFirst) {
+					MyTime = time(nullptr) - MyFirst;
+				}
+				else {
+					MyTime = 0;
+				}
+			}
+			else if (MyFirst & MyLast) {
+				MyTime = MyLast - MyFirst;
+			}
+			else {
+				MyTime = 0;
+			}
+			Dest.UInt64 = static_cast<uint64_t>(MyTime);
+			Dest.Type = mq::datatypes::pTimeStampType;
+			return true;
+
+		case MyStatus:
+			if (MyActive) {
+				Dest.Int = 1;
+			}
+			else {
+				Dest.Int = 0;
+			}
+			Dest.Type = mq::datatypes::pIntType;
+
+			return true;
+
+		case MyPetID:
+			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+			if (pSpawn && pSpawn->PetID != -1)
+			{
+				Dest.Int = pSpawn->PetID;
+				Dest.Type = mq::datatypes::pIntType;
+				return true;
+			}
+			else {
+				Dest.Int = 0;
+				Dest.Type = mq::datatypes::pIntType;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	bool ToString(MQVarPtr VarPtr, PCHAR Destination) override
+	{
+		strcpy_s(Destination, MAX_STRING, Active ? "TRUE" : "FALSE");
+		return true;
+	}
+
+	bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source) override
+	{
+		return false;
+	}
+
+	virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
+	{
+		return false;
+	}
+};
+
+MQ2DPSAdvType* pDpsAdvType = nullptr;
+
+bool dataDPSAdv(const char* szName, MQTypeVar &Dest)
+{
+	Dest.DWord = 1;
+	Dest.Type = pDpsAdvType;
+	return true;
 }
 
 PLUGIN_API void SetGameState(int GameState)
 {
-	DebugSpewAlways("GameState Change: %i", GameState);
 	if (GameState == GAMESTATE_INGAME) {
 		if (!DPSWnd) CreateDPSWindow();
+		// Name could change without the gamestate changing, but it's rare
+		if (GetCharInfo()) {
+			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
+			if (pSpawn) {
+				strcpy_s(MyName, pSpawn->DisplayedName);
+				return;
+			}
+		}
+		// MyName is used for matching DPS and we don't want false positive matches.
+		strcpy_s(MyName, "NameNotFound");
 	}
 }
 
@@ -1383,45 +1489,47 @@ PLUGIN_API void InitializePlugin()
 	if (IsXMLFilePresent("MQUI_DPSAdvWnd.xml")) {
 		AddXMLFile("MQUI_DPSAdvWnd.xml");
 	} else {
-		WriteChatf("MQ2DPSAdv:  Could not find MQUI_DPSAdvWnd.xml.  Please place in resources/uifiles/default");
+		WriteChatf("[MQ2DPSAdv] Could not find MQUI_DPSAdvWnd.xml.  Please place in %s/uifiles/default", gPathResources);
 	}
 	AddCommand("/dpsadv", DPSAdvCmd);
+	// additions for DPS Meter
+	pDpsAdvType = new MQ2DPSAdvType;
+	AddMQ2Data("DPSAdv", dataDPSAdv);
+	// Additions End
 	CheckActive();
-	if (gGameState == GAMESTATE_INGAME && pCharSpawn)
-	{
-		CreateDPSWindow();
-	}
+	MyActive = false;
 }
 
 PLUGIN_API void ShutdownPlugin()
 {
 	DestroyDPSWindow();
 	RemoveCommand("/dpsadv");
+	// additions for DPS Meter
+	RemoveMQ2Data("DPSAdv");
+	delete pDpsAdvType;
+	// Additions End
 }
-
 
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 {
 	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
-	if (Active) {
+	if (Active || MyActive) {
 		if (Debug) {
 			char szMsg[MAX_STRING] = { 0 };
 			strcpy_s(szMsg, Line);
-			int len = strlen(szMsg);
+			if (strchr(szMsg, '\x12')) {
+				// Message includes link (item tags/spell), must clean first
+				const int len = strlen(szMsg);
 
-			auto pszCleanOrg = std::make_unique<char[]>(len + 64);
-			char* szClean = pszCleanOrg.get();
+				auto pszCleanOrg = std::make_unique<char[]>(len + 64);
+				char* szClean = pszCleanOrg.get();
 
-			strcpy_s(szClean, len + 64, szMsg);
+				strcpy_s(szClean, len + 64, szMsg);
 
-			if (strchr(szClean, '\x12'))
-			{
 				CXStr out = CleanItemTags(szClean, false);
 				strcpy_s(szClean, len + 64, out.c_str());
+				strncpy_s(szMsg, szClean, MAX_STRING - 1);
 			}
-
-			strncpy_s(szMsg, szClean, MAX_STRING - 1);
-
 			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, szMsg);
 		}
 		switch (Color) {
@@ -1594,12 +1702,27 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 }
 
 bool CheckInterval() {
-	if (!Intervals) Intervals = time(nullptr);
-	else if (Intervals != time(nullptr)) {
-		Intervals = time(nullptr);
+	time_t timenow = time(nullptr);
+	if (!Intervals)
+		Intervals = timenow;
+	else if (Intervals != timenow) {
+		Intervals = timenow;
 		return true;
 	}
 	return false;
+}
+
+void CheckActive() {
+	if (DPSWnd && DPSWnd->IsVisible() && !Zoning && !WrongUI) Active = true;
+	else Active = false;
+}
+
+void ListSwitch(DPSMob* Switcher) {
+	CurListMob = Switcher;
+	DPSWnd->LTopList->SetCurSel(-1);
+	DPSWnd->LTopList->SetVScrollPos(0);
+	DPSWnd->DrawList(true);
+	DPSWnd->DrawCombo();
 }
 
 void TargetSwitch() {
@@ -1613,22 +1736,27 @@ void IntPulse() {
 	CurMaxMob = 0;
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
-		if ((!Mob->Active || ((Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive)) && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) {
+		if (Mob == nullptr // Somehow this was a null pointer
+		        || MobList.size() > static_cast<size_t>(HistoryLimit + 1) // We have exceeded the limit of mobs in the config (+1 due to display of the "Active" mob)
+		        || (!Mob->Active || (Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive) // It's not active or it's a pet/player/merc that's inactive?
+		        && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) // It's not one of our UI mobs
+		{
 			MobList.erase(MobList.begin() + i);
 			delete Mob;
 			i--;
 		}
 		else {
-			if (Mob->Active && !Mob->Dead && time(0) - Mob->Damage.Last > FightTO) {
+			time_t timenow = time(nullptr);
+			if (Mob->Active && !Mob->Dead && timenow - Mob->Damage.Last > FightTO) {
 				HandleDeath(Mob);
 				CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && !Mob->InActive && time(nullptr) - Mob->Damage.Last > FightIA) {
+			else if (Mob->Active && !Mob->Dead && !Mob->InActive && timenow - Mob->Damage.Last > FightIA) {
 				Mob->InActive = true;
 				sprintf_s(Mob->Tag, "[IA] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;
 			}
-			else if (Mob->Active && !Mob->Dead && Mob->InActive && time(nullptr) - Mob->Damage.Last < FightIA) {
+			else if (Mob->Active && !Mob->Dead && Mob->InActive && timenow - Mob->Damage.Last < FightIA) {
 				Mob->InActive = false;
 				sprintf_s(Mob->Tag, "[A] ");
 				if (!Mob->IsPet() && !Mob->Mercenary) CChange = true;

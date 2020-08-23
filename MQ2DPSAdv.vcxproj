@@ -52,6 +52,7 @@
     <ClCompile Include="MQ2DPSAdv.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="MQ2DPSAdv.h" />
     <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
