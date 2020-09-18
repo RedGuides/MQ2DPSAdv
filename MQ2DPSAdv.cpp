@@ -583,7 +583,7 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", HistoryLimit ? 1 : 0);
+	sprintf_s(szTemp, "%i", HistoryLimit);
 	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
 
 	//Save the column widths
@@ -1795,6 +1795,7 @@ void TargetSwitch() {
 void IntPulse() {
 	bool CChange = false;
 	CurMaxMob = nullptr;
+	const auto MobListSizeStart = MobList.size();
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
 		if (Mob == nullptr // Somehow this was a null pointer
@@ -1825,7 +1826,8 @@ void IntPulse() {
 			if (Mob->Active && !Mob->InActive && !Mob->Dead && !Mob->IsPet() && Mob->SpawnType == SPAWN_NPC && (int)Mob->Damage.Last > MaxDmgLast && (!CurMaxMob || Mob->Damage.Total > CurMaxMob->Damage.Total)) CurMaxMob = Mob;
 		}
 	}
-	if (CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob) ListSwitch(CurMaxMob);
+	if (MobListSizeStart > MobList.size() || CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob)
+		ListSwitch(CurMaxMob);
 	if (CChange) DPSWnd->DrawCombo();
 	DPSWnd->DrawList();
 	//WriteChatf("Active: %s", Active ? "Yes" : "No");
