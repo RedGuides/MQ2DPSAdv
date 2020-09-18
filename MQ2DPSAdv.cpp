@@ -259,6 +259,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (!(TFightIA = (CTextEntryWnd*)GetChildItem("DPS_FightIAInput"))) CheckUI = true;
 	if (!(TFightTO = (CTextEntryWnd*)GetChildItem("DPS_FightTOInput"))) CheckUI = true;
 	if (!(TEntTO = (CTextEntryWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
+	if (!(THistoryLimit = (CTextEntryWnd*)GetChildItem("DPS_HistoryLimitInput"))) CheckUI = true;
 	if (!(CShowTotal = (CComboWnd*)GetChildItem("DPS_ShowTotal"))) CheckUI = true;
 	//End DPS Settings Tab
 
@@ -613,6 +614,8 @@ void CDPSAdvWnd::LoadSettings() {
 	SetCXStr(&TFightTO->InputText, szTemp);
 	sprintf_s(szTemp, "%i", EntTO);
 	SetCXStr(&TEntTO->InputText, szTemp);
+	sprintf_s(szTemp, "%i", HistoryLimit);
+	SetCXStr(&THistoryLimit->InputText, szTemp);
 
 	//Clear and populate the ComboBox options for Show Total
 	CShowTotal->DeleteAll();
@@ -771,6 +774,13 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				szTemp[2] = 0;
 				EntTO = atoi(szTemp);
 				if (EntTO < 3) EntTO = 8;
+			}
+		}
+		else if (pWnd == (CXWnd*)THistoryLimit) {
+			if (strlen(szTemp)) {
+				szTemp[2] = 0;
+				HistoryLimit = atoi(szTemp);
+				if (HistoryLimit < 1) HistoryLimit = 1;
 			}
 		}
 	}

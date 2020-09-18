@@ -153,6 +153,7 @@ public:
 	CTextEntryWnd* TFightIA;
 	CTextEntryWnd* TFightTO;
 	CTextEntryWnd* TEntTO;
+	CTextEntryWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 	bool ReSort;
 
