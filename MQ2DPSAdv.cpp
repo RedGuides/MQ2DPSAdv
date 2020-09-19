@@ -778,7 +778,6 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 		}
 		else if (pWnd == (CXWnd*)THistoryLimit) {
 			if (strlen(szTemp)) {
-				szTemp[2] = 0;
 				HistoryLimit = atoi(szTemp);
 				if (HistoryLimit < 1) HistoryLimit = 1;
 			}
