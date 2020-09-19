@@ -7,7 +7,7 @@
 		<Font>1</Font>
 		<DrawTemplate>WDT_Inner</DrawTemplate>
 		<AutoStretch>true</AutoStretch>
-		
+
 		<RelativePosition>true</RelativePosition>
 		<AutoStretch>true</AutoStretch>
 		<LeftAnchorOffset>2</LeftAnchorOffset>
@@ -27,7 +27,7 @@
 			<G>255</G>
 			<B>255</B>
 		</TextColor>
-		
+
 	</Combobox>
 
 	<Listbox item = "DPS_TopList">
@@ -436,6 +436,50 @@
 		<AlignRight>false</AlignRight>
 	</Label>
 
+	<Editbox item="DPS_HistoryLimitInput">
+		<ScreenID>DPS_HistoryLimitInput</ScreenID>
+		<DrawTemplate>WDT_Inner</DrawTemplate>
+		<Style_Border>true</Style_Border>
+		<Font>3</Font>
+		<RelativePosition>true</RelativePosition>
+		<Location>
+			<X>2</X>
+			<Y>162</Y>
+		</Location>
+		<Size>
+			<CX>25</CX>
+			<CY>20</CY>
+		</Size>
+		<TextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TextColor>
+	</Editbox>
+
+	<Label item="DPS_HistoryLimitLabel">
+		<ScreenID>DPS_HistoryLimitLabel</ScreenID>
+		<Font>3</Font>
+		<RelativePosition>true</RelativePosition>
+		<Location>
+			<X>30</X>
+			<Y>164</Y>
+		</Location>
+		<Size>
+			<CX>150</CX>
+			<CY>20</CY>
+		</Size>
+		<Text>History Limit</Text>
+		<TextColor>
+			<R>255</R>
+			<G>255</G>
+			<B>255</B>
+		</TextColor>
+		<NoWrap>true</NoWrap>
+		<AlignCenter>false</AlignCenter>
+		<AlignRight>false</AlignRight>
+	</Label>
+
 	<Button item="DPS_LiveUpdateBox">
 		<ScreenID>DPS_LiveUpdateBox</ScreenID>
 		<Font>2</Font>
@@ -489,7 +533,7 @@
 		<AlignCenter>false</AlignCenter>
 		<AlignRight>false</AlignRight>
 	</Label>
-	
+
 	<Button item="DPS_UseTBMKOutputBox">
 		<ScreenID>DPS_UseTBMKOutputBox</ScreenID>
 		<Font>2</Font>
@@ -520,7 +564,7 @@
 			<PressedFlyby>A_CheckBoxPressed</PressedFlyby>
 		</ButtonDrawTemplate>
 	</Button>
-	
+
 	<Label item="DPS_UseTBMKOutputLabel">
 		<ScreenID>DPS_UseTBMKOutputLabel</ScreenID>
 		<Font>3</Font>
@@ -570,31 +614,34 @@
 		</Size>
 		<Pieces>DPS_ShowMeTopBox</Pieces>
 		<Pieces>DPS_ShowMeTopLabel</Pieces>
-		
+
 		<Pieces>DPS_ShowMeMinLabel</Pieces>
 		<Pieces>DPS_ShowMeMinBox</Pieces>
 		<Pieces>DPS_ShowMeMinInput</Pieces>
-		
+
 		<Pieces>DPS_UseRaidColorsBox</Pieces>
 		<Pieces>DPS_UseRaidColorsLabel</Pieces>
-		
+
 		<Pieces>DPS_LiveUpdateBox</Pieces>
 		<Pieces>DPS_LiveUpdateLabel</Pieces>
-		
+
 		<Pieces>DPS_UseTBMKOutputBox</Pieces>
 		<Pieces>DPS_UseTBMKOutputLabel</Pieces>
-		
+
 		<Pieces>DPS_FightIAInput</Pieces>
 		<Pieces>DPS_FightIALabel</Pieces>
-		
+
 		<Pieces>DPS_FightTOInput</Pieces>
 		<Pieces>DPS_FightTOLabel</Pieces>
-		
+
 		<Pieces>DPS_EntTOInput</Pieces>
 		<Pieces>DPS_EntTOLabel</Pieces>
-		
+
+		<Pieces>DPS_HistoryLimitInput</Pieces>
+		<Pieces>DPS_HistoryLimitLabel</Pieces>
+
 		<Pieces>DPS_ShowTotal</Pieces>
-		
+
 	</Page>
 
 
@@ -658,7 +705,7 @@
 		<ScreenID>Subwindows</ScreenID>
 		<RelativePosition>true</RelativePosition>
 		<AutoStretch>true</AutoStretch>
-		
+
 		<LeftAnchorOffset>0</LeftAnchorOffset>
 		<TopAnchorOffset>0</TopAnchorOffset>
 		<RightAnchorOffset>0</RightAnchorOffset>
@@ -698,4 +745,4 @@
 		<Pieces>DPS_Tabs</Pieces>
 	</Screen>
 
-</XML> 
+</XML>

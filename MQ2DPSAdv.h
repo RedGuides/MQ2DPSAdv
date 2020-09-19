@@ -153,6 +153,7 @@ public:
 	CEditWnd* TFightIA;
 	CEditWnd* TFightTO;
 	CEditWnd* TEntTO;
+	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 	bool ReSort;
 

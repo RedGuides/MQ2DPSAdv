@@ -5,7 +5,7 @@
 #include "MQ2DPSAdv.h"
 
 PreSetup("MQ2DPSAdv");
-PLUGIN_VERSION(1.5);
+PLUGIN_VERSION(1.6);
 
 // ############################### DPSEntry Start ############################################
 
@@ -244,7 +244,8 @@ DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[], bool Create /* = true */, boo
 // ############################### CDPSAdvWnd START ############################################
 
 CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
-	int CheckUI = false;
+	// TODO:  This looks like it can all be done with WrongUI
+	bool CheckUI = false;
 	//Tabs holder exists?
 	if (!(Tabs = (CTabWnd*)GetChildItem("DPS_Tabs"))) CheckUI = true;
 
@@ -258,6 +259,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (!(TFightIA = (CEditWnd*)GetChildItem("DPS_FightIAInput"))) CheckUI = true;
 	if (!(TFightTO = (CEditWnd*)GetChildItem("DPS_FightTOInput"))) CheckUI = true;
 	if (!(TEntTO = (CEditWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
+	if (!(THistoryLimit = (CEditWnd*)GetChildItem("DPS_HistoryLimitInput"))) CheckUI = true;
 	if (!(CShowTotal = (CComboWnd*)GetChildItem("DPS_ShowTotal"))) CheckUI = true;
 	//End DPS Settings Tab
 
@@ -270,15 +272,16 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (CheckUI) {
 		WriteChatf("\ar[MQ2DPSAdv] Incorrect UI File in use. Please update to latest and reload plugin.");
 		WrongUI = true;
-		return;
 	}
 	else
+	{
 		WrongUI = false;
 
-	LoadLoc();
-	CMobList->SetColors(0xFFCC3333, 0xFF666666, 0xFF000000);
-	Tabs->UpdatePage();
-	DrawCombo();
+		LoadLoc();
+		CMobList->SetColors(0xFFCC3333, 0xFF666666, 0xFF000000);
+		Tabs->UpdatePage();
+		DrawCombo();
+	}
 }
 
 CDPSAdvWnd::~CDPSAdvWnd() {}
@@ -287,11 +290,30 @@ void CDPSAdvWnd::DrawCombo() {
 	int CurSel = CMobList->GetCurChoice();
 	CMobList->DeleteAll();
 	CHAR szTemp[MAX_STRING] = { 0 };
-	sprintf_s(szTemp, "<Target> %s%s", CListType == CLISTTARGET && CurListMob ? CurListMob->Tag : "", CListType == CLISTTARGET && CurListMob ? CurListMob->Name : "None");
-	CMobList->InsertChoice(szTemp);
-	sprintf_s(szTemp, "<MaxDmg> %s%s", CListType == CLISTMAXDMG && CurListMob ? CurListMob->Tag : "", CListType == CLISTMAXDMG && CurListMob ? CurListMob->Name : "None");
+	// TODO:  There's probably a better way to do this since this code is duplicated, but this moves the previous ternaries into a more readable format.
+	strcpy_s(szTemp, "<Target> ");
+	if (CListType == CLISTTARGET && CurListMob != nullptr)
+	{
+		strcat_s(szTemp, CurListMob->Tag);
+		strcat_s(szTemp, CurListMob->Name);
+	}
+	else
+	{
+		strcat_s(szTemp, "None");
+	}
 	CMobList->InsertChoice(szTemp);
 
+	strcpy_s(szTemp, "<MaxDmg> ");
+	if (CListType == CLISTMAXDMG && CurListMob != nullptr)
+	{
+		strcat_s(szTemp, CurListMob->Tag);
+		strcat_s(szTemp, CurListMob->Name);
+	}
+	else
+	{
+		strcat_s(szTemp, "None");
+	}
+	CMobList->InsertChoice(szTemp);
 
 	DPSMob* Mob = nullptr;
 	int ListSize = 0;
@@ -556,7 +578,7 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", HistoryLimit ? 1 : 0);
+	sprintf_s(szTemp, "%i", HistoryLimit);
 	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
 
 	//Save the column widths
@@ -581,6 +603,7 @@ void CDPSAdvWnd::LoadSettings() {
 	TFightIA->InputText = FightIA;
 	TFightTO->InputText = FightTO;
 	TEntTO->InputText = EntTO;
+	THistoryLimit->InputText = HistoryLimit;
 
 	//Clear and populate the ComboBox options for Show Total
 	CShowTotal->DeleteAll();
@@ -681,12 +704,12 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 			LoadSettings();
 		}
 		else if (pWnd == (CXWnd*)CMobList) {
-			CurListMob = 0;
+			CurListMob = nullptr;
 			LTopList->DeleteAll();
 			bool FoundMob = false;
 			if ((int)CMobList->GetCurChoice() > 1) {
 				CListType = 2;
-				DPSMob* ListMob = 0;
+				DPSMob* ListMob = nullptr;
 				int i = 0, x = 0;
 				for (i = 0; i < (int)MobList.size() - 1; i++) {
 					ListMob = MobList[i];
@@ -733,6 +756,12 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				if (EntTO < 3) EntTO = 8;
 			}
 		}
+		else if (pWnd == (CXWnd*)THistoryLimit) {
+			if (!THistoryLimit->InputText.empty()) {
+				HistoryLimit = GetIntFromString(HistoryLimit->InputText, 1);
+				if (HistoryLimit < 1) HistoryLimit = 1;
+			}
+		}
 	}
 
 	return CSidlScreenWnd::WndNotification(pWnd, Message, unknown);
@@ -740,14 +769,15 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 
 template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Create, bool Alive) {
 	//ParsePet(Name);
-	if (LastMob && (!Alive || (Alive && !LastMob->Dead)) && !_stricmp(LastMob->Name, Name)) return LastMob;
-	else {
-		if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();
-		for (int i = 0; i < (int)MobList.size(); i++) {
-			if ((!Alive || (Alive && !MobList[i]->Dead)) && !_stricmp(MobList[i]->Name, Name)) {
-				LastMob = MobList[i];
-				return LastMob;
-			}
+	if (LastMob && (!Alive || (Alive && !LastMob->Dead)) && !_stricmp(LastMob->Name, Name))
+		return LastMob;
+
+	if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();
+	// TODO: Range based for loop.
+	for (int i = 0; i < (int)MobList.size(); i++) {
+		if ((!Alive || (Alive && !MobList[i]->Dead)) && !_stricmp(MobList[i]->Name, Name)) {
+			LastMob = MobList[i];
+			return LastMob;
 		}
 	}
 	if (Create) {
@@ -755,7 +785,7 @@ template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Cre
 		MobList.push_back(LastMob);
 		return LastMob;
 	}
-	return 0;
+	return nullptr;
 }
 
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
@@ -1477,11 +1507,11 @@ PLUGIN_API void OnReloadUI()
 
 PLUGIN_API void InitializePlugin()
 {
-	LastMob = 0;
-	CurTarget = 0;
-	CurTarMob = 0;
-	CurListMob = 0;
-	CurMaxMob = 0;
+	LastMob = nullptr;
+	CurTarget = nullptr;
+	CurTarMob = nullptr;
+	CurListMob = nullptr;
+	CurMaxMob = nullptr;
 	Zoning = false;
 	ShowMeTop = false;
 	WrongUI = false;
@@ -1733,7 +1763,8 @@ void TargetSwitch() {
 
 void IntPulse() {
 	bool CChange = false;
-	CurMaxMob = 0;
+	CurMaxMob = nullptr;
+	const auto MobListSizeStart = MobList.size();
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
 		if (Mob == nullptr // Somehow this was a null pointer
@@ -1746,7 +1777,7 @@ void IntPulse() {
 			i--;
 		}
 		else {
-			time_t timenow = time(nullptr);
+			const time_t timenow = time(nullptr);
 			if (Mob->Active && !Mob->Dead && timenow - Mob->Damage.Last > FightTO) {
 				HandleDeath(Mob);
 				CChange = true;
@@ -1764,7 +1795,8 @@ void IntPulse() {
 			if (Mob->Active && !Mob->InActive && !Mob->Dead && !Mob->IsPet() && Mob->SpawnType == SPAWN_NPC && (int)Mob->Damage.Last > MaxDmgLast && (!CurMaxMob || Mob->Damage.Total > CurMaxMob->Damage.Total)) CurMaxMob = Mob;
 		}
 	}
-	if (CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob) ListSwitch(CurMaxMob);
+	if (MobListSizeStart > MobList.size() || CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob)
+		ListSwitch(CurMaxMob);
 	if (CChange) DPSWnd->DrawCombo();
 	DPSWnd->DrawList();
 	//WriteChatf("Active: %s", Active ? "Yes" : "No");
@@ -1784,8 +1816,9 @@ PLUGIN_API void OnPulse() {
 PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 {
 	if (!Zoning) {
-		DPSMob* pMob = 0;
-		DPSMob::DPSEntry* pEnt = 0;
+		DPSMob* pMob = nullptr;
+		DPSMob::DPSEntry* pEnt = nullptr;
+		// TODO: Both of these should probably be range based for loops.
 		for (int i = 0; i < (int)MobList.size(); i++) {
 			pMob = MobList[i];
 			if (pMob->Spawn && pMob->Spawn->SpawnID == pSpawn->SpawnID) pMob->Spawn = 0;
@@ -1798,13 +1831,14 @@ PLUGIN_API void OnRemoveSpawn(PSPAWNINFO pSpawn)
 }
 
 void ZoneProcess() {
-	LastMob = 0;
-	CurTarget = 0;
-	CurTarMob = 0;
-	CurListMob = 0;
-	CurMaxMob = 0;
-	DPSMob* pMob = 0;
-	DPSMob::DPSEntry* pEnt = 0;
+	LastMob = nullptr;
+	CurTarget = nullptr;
+	CurTarMob = nullptr;
+	CurListMob = nullptr;
+	CurMaxMob = nullptr;
+	DPSMob* pMob = nullptr;
+	DPSMob::DPSEntry* pEnt = nullptr;
+	// TODO: Both of these should probably be range based for loops.
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		pMob = MobList[i];
 		pMob->Spawn = 0;
