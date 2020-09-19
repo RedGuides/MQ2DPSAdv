@@ -758,7 +758,7 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 		}
 		else if (pWnd == (CXWnd*)THistoryLimit) {
 			if (!THistoryLimit->InputText.empty()) {
-				HistoryLimit = GetIntFromString(HistoryLimit->InputText, 1);
+				HistoryLimit = GetIntFromString(THistoryLimit->InputText, 1);
 				if (HistoryLimit < 1) HistoryLimit = 1;
 			}
 		}
