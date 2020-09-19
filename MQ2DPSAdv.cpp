@@ -5,7 +5,7 @@
 #include "MQ2DPSAdv.h"
 
 PreSetup("MQ2DPSAdv");
-PLUGIN_VERSION(1.5);
+PLUGIN_VERSION(1.6);
 
 // ############################### DPSEntry Start ############################################
 
