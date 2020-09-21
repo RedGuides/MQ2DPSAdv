@@ -1798,9 +1798,9 @@ void IntPulse() {
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
 		if (Mob == nullptr // Somehow this was a null pointer
-		        || MobList.size() > static_cast<size_t>(HistoryLimit + 1) // We have exceeded the limit of mobs in the config (+1 due to display of the "Active" mob)
-		        || (!Mob->Active || (Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive) // It's not active or it's a pet/player/merc that's inactive?
-		        && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) // It's not one of our UI mobs
+		        || (MobList.size() > static_cast<size_t>(HistoryLimit + 1) // We have exceeded the limit of mobs in the config (+1 due to display of the "Active" mob)
+		                || (!Mob->Active || (Mob->IsPet() || Mob->SpawnType == SPAWN_PLAYER || Mob->Mercenary) && Mob->InActive)) // It's not active or it's a pet/player/merc that's inactive?
+		            && Mob != CurTarMob && Mob != CurListMob && Mob != LastMob && Mob != CurMaxMob) // It's not one of our UI mobs
 		{
 			MobList.erase(MobList.begin() + i);
 			delete Mob;
