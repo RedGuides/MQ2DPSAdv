@@ -578,11 +578,8 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
 	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
 	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", HistoryLimit);
 	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
 
-	//Save the column widths
-	for (int i = 0; i <= 5; i++) {
 		char szColumn[16] = { 0 };
 		sprintf_s(szColumn, 16, "Column%iWidth", i);
 		sprintf_s(szTemp, "%i", LTopList->GetColumnWidth(i));
