@@ -540,50 +540,32 @@ void CDPSAdvWnd::SaveLoc() {
 	if (!GetCharInfo() || GetCharInfo()->Name[0] == '\0')
 		return;
 
-	CHAR szTemp[MAX_STRING] = { 0 };
 	WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
-	sprintf_s(szTemp, "%i", GetLocation().top);
-	WritePrivateProfileString(GetCharInfo()->Name, "Top", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", GetLocation().bottom);
-	WritePrivateProfileString(GetCharInfo()->Name, "Bottom", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", GetLocation().left);
-	WritePrivateProfileString(GetCharInfo()->Name, "Left", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", GetLocation().right);
-	WritePrivateProfileString(GetCharInfo()->Name, "Right", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", GetAlpha());
-	WritePrivateProfileString(GetCharInfo()->Name, "Alpha", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", GetFadeToAlpha());
-	WritePrivateProfileString(GetCharInfo()->Name, "FadeToAlpha", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", CListType);
-	WritePrivateProfileString(GetCharInfo()->Name, "CListType", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", LiveUpdate ? 1 : 0);
-	WritePrivateProfileString(GetCharInfo()->Name, "LiveUpdate", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", IsVisible());
-	WritePrivateProfileString(GetCharInfo()->Name, "Show", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", ShowMeTop ? 1 : 0);
-	WritePrivateProfileString(GetCharInfo()->Name, "ShowMeTop", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", ShowMeMin ? 1 : 0);
-	WritePrivateProfileString(GetCharInfo()->Name, "ShowMeMin", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", ShowMeMinNum);
-	WritePrivateProfileString(GetCharInfo()->Name, "ShowMeMinNum", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", UseRaidColors ? 1 : 0);
-	WritePrivateProfileString(GetCharInfo()->Name, "UseRaidColors", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", ShowTotal);
-	WritePrivateProfileString(GetCharInfo()->Name, "ShowTotal", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", FightIA);
-	WritePrivateProfileString(GetCharInfo()->Name, "FightIA", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", FightTO);
-	WritePrivateProfileString(GetCharInfo()->Name, "FightTO", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", EntTO);
-	WritePrivateProfileString(GetCharInfo()->Name, "EntTO", szTemp, INIFileName);
-	sprintf_s(szTemp, "%i", UseTBMKOutputs ? 1 : 0);
-	WritePrivateProfileString(GetCharInfo()->Name, "UseTBMKOutputs", szTemp, INIFileName);
-	WritePrivateProfileString(GetCharInfo()->Name, "HistoryLimit", szTemp, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "Top", GetLocation().top, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "Bottom", GetLocation().bottom, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "Left", GetLocation().left, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "Right", GetLocation().right, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "Alpha", GetAlpha(), INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "FadeToAlpha", GetFadeToAlpha(), INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "CListType", CListType, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "LiveUpdate", LiveUpdate, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "Show", IsVisible(), INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "ShowMeTop", ShowMeTop, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "ShowMeMin", ShowMeMin, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "ShowMeMinNum", ShowMeMinNum, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "UseRaidColors", UseRaidColors, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "ShowTotal", ShowTotal, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "FightIA", FightIA, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "FightTO", FightTO, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "EntTO", EntTO, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "UseTBMKOutputs", UseTBMKOutputs, INIFileName);
+	WritePrivateProfileBool(GetCharInfo()->Name, "HistoryLimit", HistoryLimit, INIFileName);
 
+	//Save the column widths
+	for (int i = 0; i <= 5; i++) {
 		char szColumn[16] = { 0 };
 		sprintf_s(szColumn, 16, "Column%iWidth", i);
-		sprintf_s(szTemp, "%i", LTopList->GetColumnWidth(i));
-		WritePrivateProfileString(GetCharInfo()->Name, szColumn, szTemp, INIFileName);
+		WritePrivateProfileInt(GetCharInfo()->Name, szColumn, LTopList->GetColumnWidth(i), INIFileName);
 	}
 }
 
@@ -647,6 +629,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	FightIA = GetPrivateProfileInt(szName, "FightIA", 8, INIFileName);
 	FightTO = GetPrivateProfileInt(szName, "FightTO", 30, INIFileName);
 	EntTO = GetPrivateProfileInt(szName, "EntTO", 8, INIFileName);
+	// FIXME:  All of these are narrowing conversions.
 	MeColor = GetPrivateProfileInt(szName, "MeColor", 0xFF00CC00, INIFileName);
 	MeTopColor = GetPrivateProfileInt(szName, "MeTopColor", 0xFF00CC00, INIFileName);
 	NormalColor = GetPrivateProfileInt(szName, "NormalColor", 0xFFFFFFFF, INIFileName);
@@ -667,7 +650,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 	for (int i = 0; i <= 5; i++) {
 		char szTemp[16] = { 0 };
 		sprintf_s(szTemp, 16, "Column%iWidth", i);
-		int temp = GetPrivateProfileInt(szName, szTemp, 0, INIFileName);
+		const int temp = GetPrivateProfileInt(szName, szTemp, 0, INIFileName);
 		if (temp != 0) {
 			LTopList->SetColumnWidth(i, temp);
 		}
