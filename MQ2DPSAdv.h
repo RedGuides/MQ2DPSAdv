@@ -56,20 +56,6 @@ time_t MyLast;
 uint64_t MyTime;
 //----------------------------------------------------------------------------
 
-//----------------------------------------------------------------------------
-// new below here for current character DPS totals, this does NOT show up in the DPS Window.
-char MyName[64];
-uint64_t MyTotal;
-uint64_t MyPetTotal;
-float MyDPSValue;
-float MyPetDPS;
-float TotalDPSValue;
-bool MyActive; // This is to turn on and off the DPS accumlator for just yourself.
-time_t MyFirst;
-time_t MyLast;
-uint64_t MyTime;
-//----------------------------------------------------------------------------
-
 struct EntDamage {
 	uint64_t Total;
 	time_t First;
