@@ -1496,11 +1496,7 @@ PLUGIN_API void InitializePlugin()
 	ShowMeTop = false;
 	WrongUI = false;
 	// TODO:  Add as a resource to automatically unpack
-	if (IsXMLFilePresent("MQUI_DPSAdvWnd.xml")) {
-		AddXMLFile("MQUI_DPSAdvWnd.xml");
-	} else {
-		WriteChatf("[MQ2DPSAdv] Could not find MQUI_DPSAdvWnd.xml.  Please place in %s/uifiles/default", gPathResources);
-	}
+	AddXMLFile("MQUI_DPSAdvWnd.xml");
 	AddCommand("/dpsadv", DPSAdvCmd);
 	// additions for DPS Meter
 	pDpsAdvType = new MQ2DPSAdvType;
