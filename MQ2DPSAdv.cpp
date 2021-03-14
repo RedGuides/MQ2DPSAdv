@@ -1279,10 +1279,6 @@ public:
 		TypeMember(MyPetID);
 	}
 
-	~MQ2DPSAdvType()
-	{
-	}
-
 	virtual bool GetMember(MQVarPtr VarPtr, const char* Member, char* Index, MQTypeVar& Dest) override
 	{
 		MQTypeMember* pMember = MQ2DPSAdvType::FindMember(Member);
@@ -1436,16 +1432,6 @@ public:
 	{
 		strcpy_s(Destination, MAX_STRING, Active ? "TRUE" : "FALSE");
 		return true;
-	}
-
-	bool FromData(MQVarPtr& VarPtr, MQTypeVar& Source) override
-	{
-		return false;
-	}
-
-	virtual bool FromString(MQVarPtr& VarPtr, const char* Source) override
-	{
-		return false;
 	}
 };
 
