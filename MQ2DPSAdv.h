@@ -146,14 +146,14 @@ public:
 	CComboWnd* CMobList;
 	CCheckBoxWnd* CShowMeTop;
 	CCheckBoxWnd* CShowMeMin;
-	CTextEntryWnd* TShowMeMin;
+	CEditWnd* TShowMeMin;
 	CCheckBoxWnd* CUseRaidColors;
 	CCheckBoxWnd* CLiveUpdate;
 	CCheckBoxWnd* CUseTBMKOutput;
-	CTextEntryWnd* TFightIA;
-	CTextEntryWnd* TFightTO;
-	CTextEntryWnd* TEntTO;
-	CTextEntryWnd* THistoryLimit;
+	CEditWnd* TFightIA;
+	CEditWnd* TFightTO;
+	CEditWnd* TEntTO;
+	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 	bool ReSort;
 
