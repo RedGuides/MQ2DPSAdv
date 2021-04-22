@@ -16,7 +16,7 @@ DPSMob::DPSEntry::DPSEntry() {
 DPSMob::DPSEntry::DPSEntry(CHAR EntName[], DPSMob* pParent, bool PCOnly /* = false */) {
 	Init();
 	Parent = pParent;
-	strcpy_s(Name, EntName);
+	strncpy_s(Name, EntName, sizeof(Name));
 	GetSpawn(PCOnly);
 }
 
@@ -155,7 +155,7 @@ DPSMob::DPSMob() {
 
 DPSMob::DPSMob(PCHAR MobName, size_t MobLen) {
 	Init();
-	strcpy_s(Name, MobName);
+	strncpy_s(Name, MobName, sizeof(Name));
 	GetSpawn();
 	if (!_stricmp(Name, "`s pet"))
 		PetName = true;
@@ -878,7 +878,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 		return false;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	if (strstr(Line, "healed"))
+	if (strstr(Line, " healed "))
 		return false;
 
 	*Damage = atoi(strpbrk(Line, "1234567890"));
@@ -983,7 +983,7 @@ template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
 	if (!strpbrk(Line, "1234567890"))
 		return false;
-	if (strstr(Line, "healed"))
+	if (strstr(Line, " healed "))
 		return false;
 
 	*Damage = atoi(strpbrk(Line, "1234567890"));
