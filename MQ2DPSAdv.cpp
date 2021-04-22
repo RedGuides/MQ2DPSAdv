@@ -1665,9 +1665,21 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color)
 		case 298://Color: 298 - Chat Channel 8 - Incoming
 		case 299://Color: 299 - Chat Channel 9 - Incoming
 		case 300://Color: 300 - Chat Channel 10 - Incoming
-
+			break;
+		case 301://Color: 301 - Critical (YouHitOther)
+			HandleYouHitOther(Line);
+			break;
+		case 302://Color: 302 - Critical Dot & Spells (Yours)
+			// This requires checking both handle nonmelee and dot
+			// Using both of these here can cause an error in debug reporting, but that is expected.
+			HandleNonMelee(Line);
+			HandleDOT(Line);
+			break;
 		case 303://Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
-
+			break;
+		case 305://Color: 305 - Other Pet Flurry (OtherHitOther)
+			HandleOtherHitOther(Line);
+			break;
 		case 306://Color: 306 - Enrage (Showed for pet)
 		case 307://Color: 307 - Your /say messages, mob advances messages.
 		case 308://Color: 308 - You tell other.
@@ -1690,12 +1702,16 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color)
 
 		case 327://Color: 327 - Any /rsay
 			break;
-		case 328://Color: 328 - your pet misses
+		case 328://Color: 328 - My pet hits (OtherHitOther)
 			HandleOtherHitOther(Line); // Your Pet
 			break;
 		case 329://Color: 329 - Damage Shield hits you.
 		case 330://Color: 330 - Raid Role messages.
-
+			break;
+		case 331://Color: 331 - My Pet Flurry (Other Hit Other) My Pet
+		case 332://Color: 332 - My Pet Critical (Other Hit Other)
+			HandleOtherHitOther(Line);
+			break;
 		case 333://Color: 333 - Item Focus messages
 		case 334://Color: 334 - You gain Experience messages
 		case 335://Color: 335 - You have already finished collecting [Item].
@@ -1716,6 +1732,9 @@ PLUGIN_API DWORD OnIncomingChat(PCHAR Line, DWORD Color)
 
 		case 348://Color: 348 - Achievement - you and other.
 		case 349://Color: 349 - Achievement - Guildmate
+			break;
+		case 356://Color: 356 - Flurry (Yours)
+			HandleYouHitOther(Line);
 			break;
 		case 358://Color: 358 - NPC Death message
 			HandleDeath(Line); //NPC died is Color: 358 Your death is Color: 277(this was 278)
