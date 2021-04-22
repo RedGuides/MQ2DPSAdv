@@ -878,6 +878,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 		return false;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
+	if (strstr(Line, "healed"))
+		return false;
 
 	*Damage = atoi(strpbrk(Line, "1234567890"));
 
@@ -980,6 +982,8 @@ template <unsigned int _MobSize>bool SplitStringDeath(PCHAR Line, CHAR(&MobName)
 
 template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(PCHAR Line, CHAR(&EntName)[_EntSize], CHAR(&MobName)[_MobSize], int* Damage) {
 	if (!strpbrk(Line, "1234567890"))
+		return false;
+	if (strstr(Line, "healed"))
 		return false;
 
 	*Damage = atoi(strpbrk(Line, "1234567890"));
