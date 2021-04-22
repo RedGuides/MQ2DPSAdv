@@ -16,7 +16,7 @@ DPSMob::DPSEntry::DPSEntry() {
 DPSMob::DPSEntry::DPSEntry(CHAR EntName[], DPSMob* pParent, bool PCOnly /* = false */) {
 	Init();
 	Parent = pParent;
-	strncpy_s(Name, EntName, sizeof(Name));
+	strncpy_s(Name, EntName, sizeof(Name) - 1);
 	GetSpawn(PCOnly);
 }
 
@@ -155,7 +155,7 @@ DPSMob::DPSMob() {
 
 DPSMob::DPSMob(PCHAR MobName, size_t MobLen) {
 	Init();
-	strncpy_s(Name, MobName, sizeof(Name));
+	strncpy_s(Name, MobName, sizeof(Name) - 1);
 	GetSpawn();
 	if (!_stricmp(Name, "`s pet"))
 		PetName = true;
