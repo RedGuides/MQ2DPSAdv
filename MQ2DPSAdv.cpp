@@ -578,11 +578,11 @@ void CDPSAdvWnd::LoadSettings() {
 	CUseTBMKOutput->SetCheck(UseTBMKOutputs);
 
 	//Set the text in the Inputboxes to their current setting.
-	TShowMeMin->InputText = ShowMeMinNum;
-	TFightIA->InputText = FightIA;
-	TFightTO->InputText = FightTO;
-	TEntTO->InputText = EntTO;
-	THistoryLimit->InputText = HistoryLimit;
+	TShowMeMin->InputText = std::to_string(ShowMeMinNum);
+	TFightIA->InputText = std::to_string(FightIA);
+	TFightTO->InputText = std::to_string(FightTO);
+	TEntTO->InputText = std::to_string(EntTO);
+	THistoryLimit->InputText = std::to_string(HistoryLimit);
 
 	//Clear and populate the ComboBox options for Show Total
 	CShowTotal->DeleteAll();
