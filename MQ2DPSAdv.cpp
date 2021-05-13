@@ -800,7 +800,7 @@ template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Cre
 			return LastMob;
 		}
 	}
-	if (Create) {
+	if (Create && !strstr(Name, "`s pet")) {
 		LastMob = new DPSMob(Name, _NameSize);
 		MobList.push_back(LastMob);
 		return LastMob;
