@@ -157,7 +157,7 @@ DPSMob::DPSMob(PCHAR MobName, size_t MobLen) {
 	Init();
 	strncpy_s(Name, MobName, sizeof(Name) - 1);
 	GetSpawn();
-	if (!_stricmp(Name, "`s pet"))
+	if (strstr(Name, "`s pet"))
 		PetName = true;
 }
 
@@ -800,7 +800,7 @@ template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Cre
 			return LastMob;
 		}
 	}
-	if (Create && !strstr(Name, "`s pet")) {
+	if (Create) {
 		LastMob = new DPSMob(Name, _NameSize);
 		MobList.push_back(LastMob);
 		return LastMob;
