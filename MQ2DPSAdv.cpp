@@ -157,7 +157,7 @@ DPSMob::DPSMob(PCHAR MobName, size_t MobLen) {
 	Init();
 	strncpy_s(Name, MobName, sizeof(Name) - 1);
 	GetSpawn();
-	if (!_stricmp(Name, "`s pet"))
+	if (strstr(Name, "`s pet"))
 		PetName = true;
 }
 
