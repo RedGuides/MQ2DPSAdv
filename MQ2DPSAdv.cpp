@@ -426,7 +426,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 	for (i = 0; i < (int)CurListMob->EntList.size(); i++) {
 		DPSMob::DPSEntry* Ent = CurListMob->EntList[i];
 		if (Ent->Damage.Total == 0) break;
-		if (ShowMeTop && !strcmp(Ent->Name, ((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+		if (ShowMeTop && !strcmp(Ent->Name, pLocalPlayer->DisplayedName)) {
 			if (!ShowMeMin || (LineNum - RankAdj + 1) > ShowMeMinNum) FoundMe = true;
 			ThisMe = true;
 		}
@@ -510,7 +510,7 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 4, TotalColor);
 		LTopList->SetItemColor(LineNum, 5, TotalColor);
 	}
-	else if (!strcmp(Ent->Name, ((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+	else if (!strcmp(Ent->Name, pLocalPlayer->DisplayedName)) {
 		LTopList->SetItemColor(LineNum, 0, MeColor);
 		LTopList->SetItemColor(LineNum, 1, MeColor);
 		LTopList->SetItemColor(LineNum, 2, MeColor);
@@ -851,8 +851,8 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 		if (Debug) WriteChatf("NonMelee Failed, No MobEnd - Line: %s", Line);
 	}
 	if (MobEnd > 0) {
-		if ((strstr(Line, ((PSPAWNINFO)pCharSpawn)->DisplayedName) || strstr(Line, "YOUR") || strstr(Line, " is "))) {
-			sprintf_s(temp, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+		if ((strstr(Line, pLocalPlayer->DisplayedName) || strstr(Line, "YOUR") || strstr(Line, " is "))) {
+			sprintf_s(temp, pLocalPlayer->DisplayedName);
 			if (strstr(Line, " YOUR ") || strstr(Line, " is ")) {
 				//Process your damage shields.
 				MobEnd = (int)(strstr(Line, " is ") - Line);
@@ -889,7 +889,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 					return false;
 			}
 			else {
-				strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+				strcpy_s(EntName, pLocalPlayer->DisplayedName);
 			}
 			if (!strlen(MobName) || !strlen(EntName)) {
 				if (Debug) WriteChatf("NonMelee Fail: %s", Line);
@@ -952,7 +952,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const
 	int MobEnd = (int)(strstr(Line, " has taken ") - Line);
 
 	if (strstr(Line, " damage from your ")) {
-		strcpy_s(EntName, ((PSPAWNINFO)pCharSpawn)->DisplayedName);
+		strcpy_s(EntName, pLocalPlayer->DisplayedName);
 	}
 	else {
 		int EntEnd = 0;
@@ -1065,10 +1065,10 @@ void HandleYouHitOther(const char* Line) {
 	if (!SplitStringYouHitOther(Line, MobName, &Damage))
 		return;
 	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
-	if (pCharSpawn) {
+	if (pLocalPlayer) {
 		if (Active) {
 			if (DPSMob* mob = GetMob(MobName, true, true)) {
-				if (DPSMob::DPSEntry* entry = mob->GetEntry(((PSPAWNINFO)pCharSpawn)->DisplayedName)) {
+				if (DPSMob::DPSEntry* entry = mob->GetEntry(pLocalPlayer->DisplayedName)) {
 					entry->AddDamage(Damage);
 				}
 			}
@@ -1472,7 +1472,7 @@ PLUGIN_API void OnCleanUI()
 
 PLUGIN_API void OnReloadUI()
 {
-	if (gGameState == GAMESTATE_INGAME && pCharSpawn) CreateDPSWindow();
+	if (gGameState == GAMESTATE_INGAME && pLocalPlayer) CreateDPSWindow();
 }
 
 PLUGIN_API void InitializePlugin()
@@ -1508,7 +1508,7 @@ PLUGIN_API void ShutdownPlugin()
 
 PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 {
-	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return 0;
+	if (gGameState != GAMESTATE_INGAME || !pLocalPlayer) return 0;
 	if (Active || MyActive) {
 		if (Debug) {
 			char szMsg[MAX_STRING] = { 0 };
@@ -1788,7 +1788,7 @@ void IntPulse() {
 }
 
 PLUGIN_API void OnPulse() {
-	if (gGameState != GAMESTATE_INGAME || !pCharSpawn) return;
+	if (gGameState != GAMESTATE_INGAME || !pLocalPlayer) return;
 
 	if (Active && !WrongUI) {
 		if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();
