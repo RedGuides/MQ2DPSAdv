@@ -59,7 +59,7 @@
     <ResourceCompile Include="MQ2DPSAdv.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="MQUI_DPSAdvWnd.xml" />
+    <Xml Include="resources\uifiles\default\MQUI_DPSAdvWnd.xml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />
