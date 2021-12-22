@@ -559,7 +559,7 @@ void CDPSAdvWnd::SaveLoc() {
 	WritePrivateProfileInt(GetCharInfo()->Name, "FightTO", FightTO, INIFileName);
 	WritePrivateProfileInt(GetCharInfo()->Name, "EntTO", EntTO, INIFileName);
 	WritePrivateProfileBool(GetCharInfo()->Name, "UseTBMKOutputs", UseTBMKOutputs, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "HistoryLimit", HistoryLimit, INIFileName);
+	WritePrivateProfileInt(GetCharInfo()->Name, "HistoryLimit", HistoryLimit, INIFileName);
 
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
