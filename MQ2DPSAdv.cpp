@@ -715,7 +715,7 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 		if (pWnd == (CXWnd*)TShowMeMin) {
 			if (!TShowMeMin->InputText.empty()) {
 				ShowMeMinNum = GetIntFromString(TShowMeMin->InputText, 0);
-				TShowMeMin->SetSel(TShowMeMin->InputText.length(), 0);
+				TShowMeMin->SetSel((int)TShowMeMin->InputText.length(), 0);
 			}
 		}
 		else if (pWnd == (CXWnd*)TFightIA) {
@@ -793,7 +793,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 	strncpy_s(EntName, &Line[0], HitPos);
 	EntName[HitPos] = 0;
 	int DmgPos = (int)(strstr(Line, " for ") - Line);
-	int MobStart = HitPos + strlen(OtherHits[Action]);
+	int MobStart = HitPos + (int)strlen(OtherHits[Action]);
 	int MobLength = DmgPos - MobStart;
 	strncpy_s(MobName, &Line[MobStart], MobLength);
 	MobName[MobLength] = 0;
@@ -826,7 +826,7 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, c
 		return false;
 	}
 	DmgPos = (int)(strstr(Line, " for ") - Line);
-	MobStart = HitPos + strlen(YourHits[Action]);
+	MobStart = HitPos + (int)strlen(YourHits[Action]);
 	MobLength = DmgPos - MobStart;
 	strncpy_s(MobName, &Line[MobStart], MobLength);
 	MobName[MobLength] = 0;
@@ -912,7 +912,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 		strncpy_s(EntName, &Line[0], EntEnd);
 		EntName[EntEnd] = 0;
 		MobEnd = (int)(strstr(Line, " for ") - Line);
-		int MobLength = MobEnd - 5 - strlen(EntName);
+		int MobLength = (int)(MobEnd - 5 - strlen(EntName));
 		strncpy_s(MobName, &Line[EntEnd + 5], MobLength);
 		MobName[MobLength] = 0;
 		if (!strlen(MobName) || !strlen(EntName)) {
@@ -931,7 +931,7 @@ template <unsigned int _MobSize>bool SplitStringDeath(const char* Line, char(&Mo
 	if (MobLength <= 0) MobLength = (int)(strstr(Line, " has been slain by") - Line);
 	if (MobLength <= 0) {
 		MobStart = 15;
-		MobLength = strlen(Line) - 16;
+		MobLength = (int)strlen(Line) - 16;
 	}
 	if (MobLength <= 0)
 		return false;
@@ -1515,7 +1515,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 			strcpy_s(szMsg, Line);
 			if (strchr(szMsg, '\x12')) {
 				// Message includes link (item tags/spell), must clean first
-				const int len = strlen(szMsg);
+				const int len = (int)strlen(szMsg);
 
 				auto pszCleanOrg = std::make_unique<char[]>(len + 64);
 				char* szClean = pszCleanOrg.get();
