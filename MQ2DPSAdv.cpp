@@ -747,7 +747,9 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 	return CSidlScreenWnd::WndNotification(pWnd, Message, unknown);
 };
 
-template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Create, bool Alive) {
+template <unsigned int _NameSize>
+DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Create, bool Alive)
+{
 	//ParsePet(Name);
 	if (LastMob && (!Alive || (Alive && !LastMob->Dead)) && !_stricmp(LastMob->Name, Name))
 		return LastMob;
@@ -768,7 +770,9 @@ template <unsigned int _NameSize>DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Cre
 	return nullptr;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>
+bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage)
+{
 	if (strstr(Line, "injured by falling"))
 		return false;
 	int HitPos = 0, Action = 0;
@@ -776,11 +780,14 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 		return false;
 
 	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
-	while (OtherHits[Action]) {
-		HitPos = (int)(strstr(Line, OtherHits[Action]) - Line);
+	while (OtherHits[Action][0]) {
+		HitPos = find_substr(Line, OtherHits[Action]);
 		if (HitPos > 0)
 			break;
 		Action++;
+	}
+	if (!OtherHits[Action][0]) {
+		return false;
 	}
 	if (HitPos <= 0 || HitPos > 2048) {
 		if (*Damage > 0 && !WarnedOHO) {
@@ -790,28 +797,38 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringOtherHitO
 		}
 		return false;
 	}
+
 	strncpy_s(EntName, &Line[0], HitPos);
 	EntName[HitPos] = 0;
-	int DmgPos = (int)(strstr(Line, " for ") - Line);
+	int DmgPos = find_substr(Line, " for ");
+	if (DmgPos == -1) {
+		return false;
+	}
 	int MobStart = HitPos + (int)strlen(OtherHits[Action]);
 	int MobLength = DmgPos - MobStart;
 	strncpy_s(MobName, &Line[MobStart], MobLength);
 	MobName[MobLength] = 0;
-	if (!_stricmp(MobName, "himself") || !_stricmp(MobName, "herself") || !_stricmp(MobName, "itself")) strcpy_s(MobName, EntName);
+
+	if (!_stricmp(MobName, "himself") || !_stricmp(MobName, "herself") || !_stricmp(MobName, "itself"))
+		strcpy_s(MobName, EntName);
 	return true;
 }
 
-template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, char(&MobName)[_MobSize], int* Damage)
+template <unsigned int _MobSize>
+bool SplitStringYouHitOther(const char* Line, char(&MobName)[_MobSize], int* Damage)
 {
 	int Action = 0, HitPos = 0, DmgPos, MobStart, MobLength;
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 
 	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
-	while (YourHits[Action]) {
-		HitPos = (int)(strstr(Line, YourHits[Action]) - Line);
+	while (YourHits[Action][0] != 0) {
+		HitPos = find_substr(Line, YourHits[Action]);
 		if (HitPos >= 0) break;
 		Action++;
+	}
+	if (!YourHits[Action][0]) {
+		return false;
 	}
 	if (HitPos < 0 || HitPos > 2048) {
 		if (*Damage > 0 && CurTarMob) {
@@ -825,7 +842,12 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, c
 		}
 		return false;
 	}
-	DmgPos = (int)(strstr(Line, " for ") - Line);
+
+	DmgPos = find_substr(Line, " for ");
+	if (DmgPos == -1) {
+		return false;
+	}
+
 	MobStart = HitPos + (int)strlen(YourHits[Action]);
 	MobLength = DmgPos - MobStart;
 	strncpy_s(MobName, &Line[MobStart], MobLength);
@@ -833,7 +855,9 @@ template <unsigned int _MobSize> bool SplitStringYouHitOther(const char* Line, c
 	return true;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>
+bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage)
+{
 	if (strstr(Line, "You were hit"))
 		return false;
 	if (!strpbrk(Line, "1234567890"))
@@ -845,17 +869,17 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 
 	char temp[MAX_STRING] = "";
 	sprintf_s(temp, " for %i", *Damage);
-	int MobEnd = (int)(strstr(Line, temp) - Line);
+	int MobEnd = find_substr(Line, temp);
+
 	//If this was a direct damage ability [EntName] hit [MobName] for [Damage] points of [DamageType] damage.
 	if (MobEnd <= 0) {
 		if (Debug) WriteChatf("NonMelee Failed, No MobEnd - Line: %s", Line);
-	}
-	if (MobEnd > 0) {
+	} else {
 		if ((strstr(Line, pLocalPlayer->DisplayedName) || strstr(Line, "YOUR") || strstr(Line, " is "))) {
 			sprintf_s(temp, pLocalPlayer->DisplayedName);
 			if (strstr(Line, " YOUR ") || strstr(Line, " is ")) {
 				//Process your damage shields.
-				MobEnd = (int)(strstr(Line, " is ") - Line);
+				MobEnd = find_substr(Line, " is ");
 				sprintf_s(temp, " is ");
 				strncpy_s(MobName, &Line[0], MobEnd);
 			}
@@ -869,20 +893,20 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 				int EntStart = 0;
 				if (strstr(Line, " pierced by ")) {
 					//Thorns DS
-					EntEnd = (int)(strstr(Line, "'s thorns for ") - Line);
-					EntStart = (int)(strstr(Line, " pierced by ") - Line) + 12;
+					EntEnd = find_substr(Line, "'s thorns for ");
+					EntStart = find_substr(Line, " pierced by ") + 12;
 					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
 				}
 				else if (strstr(Line, " burned by ")) {
 					//Fire DS
-					EntEnd = (int)(strstr(Line, "'s flames for ") - Line);
-					EntStart = (int)(strstr(Line, " burned by ") - Line) + 11;
+					EntEnd = find_substr(Line, "'s flames for ");
+					EntStart = find_substr(Line, " burned by ") + 11;
 					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
 				}
 				else if (strstr(Line, " tormented by ")) {
 					//Frost DS
-					EntEnd = (int)(strstr(Line, "'s frost for ") - Line);
-					EntStart = (int)(strstr(Line, " tormented by ") - Line) + 14;
+					EntEnd = find_substr(Line, "'s frost for ");
+					EntStart = find_substr(Line, " tormented by ") + 14;
 					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
 				}
 				if (EntEnd < 0 || EntStart < 0)
@@ -903,44 +927,54 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringNonMelee(
 				return false;
 			}
 		}
+
 		sprintf_s(temp, " hit %s", MobName);
-		int EntEnd = (int)(strstr(Line, temp) - Line);
-		if (EntEnd <= 0) {
+		int EntEnd = find_substr(Line, temp);
+		if (EntEnd != -1) {
 			if (Debug) WriteChatf("NonMelee Fail: %s", Line);
 			return false;
 		}
+
 		strncpy_s(EntName, &Line[0], EntEnd);
 		EntName[EntEnd] = 0;
-		MobEnd = (int)(strstr(Line, " for ") - Line);
-		int MobLength = (int)(MobEnd - 5 - strlen(EntName));
-		strncpy_s(MobName, &Line[EntEnd + 5], MobLength);
-		MobName[MobLength] = 0;
-		if (!strlen(MobName) || !strlen(EntName)) {
-			if (Debug) WriteChatf("NonMelee Fail: %s", Line);
-			return false;
+
+		MobEnd = find_substr(Line, " for ");
+		if (MobEnd != -1) {
+			int MobLength = (int)(MobEnd - 5 - strlen(EntName));
+			strncpy_s(MobName, Line + EntEnd + 5, MobLength);
+			MobName[MobLength] = 0;
+			if (!strlen(MobName) || !strlen(EntName)) {
+				if (Debug) WriteChatf("NonMelee Fail: %s", Line);
+				return false;
+			}
+			return true;
 		}
-		return true;
 	}
 	return false;
 }
 
-template <unsigned int _MobSize>bool SplitStringDeath(const char* Line, char(&MobName)[_MobSize])
+template <unsigned int _MobSize>
+bool SplitStringDeath(const char* Line, char(&MobName)[_MobSize])
 {
 	int MobStart = 0, MobLength = 0;
-	MobLength = (int)(strstr(Line, " died.") - Line);
-	if (MobLength <= 0) MobLength = (int)(strstr(Line, " has been slain by") - Line);
+	MobLength = find_substr(Line, " died.");
+	if (MobLength <= 0)
+		MobLength = find_substr(Line, " has been slain by");
+
 	if (MobLength <= 0) {
 		MobStart = 15;
-		MobLength = (int)strlen(Line) - 16;
+		MobLength = (int)(strlen(Line) - 16);
 	}
 	if (MobLength <= 0)
 		return false;
-	strncpy_s(MobName, &Line[MobStart], MobLength);
+	strncpy_s(MobName, Line + MobStart, MobLength);
 	MobName[MobLength] = 0;
 	return true;
 }
 
-template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage) {
+template <unsigned int _EntSize, unsigned int _MobSize>
+bool SplitStringDOT(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage)
+{
 	if (!strpbrk(Line, "1234567890"))
 		return false;
 	if (strstr(Line, " healed "))
@@ -949,7 +983,7 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const
 	*Damage = GetIntFromString(strpbrk(Line, "1234567890"), 0);
 	if (*Damage <= 0 || strstr(Line, " damage by "))
 		return false;
-	int MobEnd = (int)(strstr(Line, " has taken ") - Line);
+	int MobEnd = find_substr(Line, " has taken ");
 
 	if (strstr(Line, " damage from your ")) {
 		strcpy_s(EntName, pLocalPlayer->DisplayedName);
@@ -957,22 +991,25 @@ template <unsigned int _EntSize, unsigned int _MobSize>bool SplitStringDOT(const
 	else {
 		int EntEnd = 0;
 		if (!strstr(Line, "Rk. I")) {
-			EntEnd = (int)(strstr(Line, ".") - Line - 6);
+			EntEnd = find_substr(Line, ".") - 6;
 		}
 		else {
-			EntEnd = (int)(strrchr(Line, '.') - Line - 6);
+			EntEnd = (int)(strrchr(Line, '.') - Line) - 6;
 		}
-		if (MobEnd <= 0 || EntEnd <= 0) return false;
-		int SpellNameStart = (int)(strstr(Line, " damage from ") - Line);
-		int SpellNameEnd = (int)(strstr(Line, " by ") - Line);
+
+		if (MobEnd <= 0 || EntEnd <= 0)
+			return false;
+
+		int SpellNameStart = find_substr(Line, " damage from ");
+		int SpellNameEnd = find_substr(Line, " by ");
 		char temp[MAX_STRING] = "";
 		strncpy_s(temp, &Line[SpellNameStart + 13], SpellNameEnd - SpellNameStart - 13);
-		int EntStart = (int)(strstr(Line, temp) - Line + strlen(temp) + 4);
+		int EntStart = find_substr(Line, temp) + (int)strlen(temp) + 4;
 		strcpy_s(EntName, &Line[EntEnd, EntStart]);
 		EntName[EntEnd - EntStart + 6] = 0;
 	}
 	strncpy_s(MobName, &Line[0], MobEnd);
-	int Corpse = (int)(strstr(MobName, "'s corpse") - MobName);
+	int Corpse = find_substr(MobName, "'s corpse");
 	if (Corpse > 0)
 		MobName[Corpse] = 0;
 	else
