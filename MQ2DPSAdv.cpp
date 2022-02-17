@@ -930,7 +930,7 @@ bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobNa
 
 		sprintf_s(temp, " hit %s", MobName);
 		int EntEnd = find_substr(Line, temp);
-		if (EntEnd != -1) {
+		if (EntEnd == -1) {
 			if (Debug) WriteChatf("NonMelee Fail: %s", Line);
 			return false;
 		}
