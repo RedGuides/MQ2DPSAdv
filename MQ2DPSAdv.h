@@ -1,6 +1,10 @@
 // DPS ADV CREATED BY WARNEN 2008-2009
 // MQ2DPSAdv.h
 
+#pragma once
+
+#include <mq/base/Color.h>
+
 char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", " rends ", " gores ", " stabs ", "" };
 char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", " rend ", " gore ", ""};
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
@@ -10,19 +14,19 @@ PSPAWNINFO CurTarget;
 time_t Intervals;
 int CListType;
 int MaxDmgLast;
-int MeColor;
-int MeTopColor;
-int NormalColor;
-int NPCColor;
-int TotalColor;
-int EntHover;
-int EntHighlight;
-int FightNormal;
-int FightHover;
-int FightHighlight;
-int FightActive;
-int FightInActive;
-int FightDead;
+mq::MQColor MeColor;
+mq::MQColor MeTopColor;
+mq::MQColor NormalColor;
+mq::MQColor NPCColor;
+mq::MQColor TotalColor;
+mq::MQColor EntHover;
+mq::MQColor EntHighlight;
+mq::MQColor FightNormal;
+mq::MQColor FightHover;
+mq::MQColor FightHighlight;
+mq::MQColor FightActive;
+mq::MQColor FightInActive;
+mq::MQColor FightDead;
 bool Saved;
 bool WarnedYHO, WarnedOHO;
 bool Debug;
@@ -155,7 +159,6 @@ public:
 	CEditWnd* TEntTO;
 	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
-	bool ReSort;
 
 	CDPSAdvWnd();
 	~CDPSAdvWnd();

@@ -128,7 +128,6 @@ void DPSMob::DPSEntry::Sort() {
 	DoSort = false;
 	if (Master && Master->DoSort) Master->Sort();
 	if (Damage.Total == 0) return;
-	//   DPSWnd->ReSort = true;
 	int i = 0, x = -1;
 	bool Inserted = false;
 	for (i = 0; i < (int)Parent->EntList.size(); i++) {
@@ -246,10 +245,11 @@ DPSMob::DPSEntry* DPSMob::GetEntry(char EntName[], bool Create /* = true */, boo
 CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	// TODO:  This looks like it can all be done with WrongUI
 	bool CheckUI = false;
-	//Tabs holder exists?
+
+	// Tabs holder exists?
 	if (!(Tabs = (CTabWnd*)GetChildItem("DPS_Tabs"))) CheckUI = true;
 
-	//DPS Settings Tab
+	// DPS Settings Tab
 	if (!(CShowMeTop = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeTopBox"))) CheckUI = true;
 	if (!(CShowMeMin = (CCheckBoxWnd*)GetChildItem("DPS_ShowMeMinBox"))) CheckUI = true;
 	if (!(TShowMeMin = (CEditWnd*)GetChildItem("DPS_ShowMeMinInput"))) CheckUI = true;
@@ -261,13 +261,14 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 	if (!(TEntTO = (CEditWnd*)GetChildItem("DPS_EntTOInput"))) CheckUI = true;
 	if (!(THistoryLimit = (CEditWnd*)GetChildItem("DPS_HistoryLimitInput"))) CheckUI = true;
 	if (!(CShowTotal = (CComboWnd*)GetChildItem("DPS_ShowTotal"))) CheckUI = true;
-	//End DPS Settings Tab
+	// End DPS Settings Tab
 
-	//DPS Tab
+	// DPS Tab
 	if (!(LTopList = (CListWnd*)GetChildItem("DPS_TopList"))) CheckUI = true;
 	if (!(CMobList = (CComboWnd*)GetChildItem("DPS_MobList"))) CheckUI = true;
 
-	this->SetBGColor(0xFF000000);//Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
+	// Setting this here sets it for the entire window. Setting everything individually was blacking out the checkboxes!
+	this->SetBGColor(MQColor(0, 0, 0));
 
 	if (CheckUI) {
 		WriteChatf("\ar[MQ2DPSAdv] Incorrect UI File in use. Please update to latest and reload plugin.");
@@ -278,7 +279,7 @@ CDPSAdvWnd::CDPSAdvWnd() :CCustomWnd("DPSAdvWnd") {
 		WrongUI = false;
 
 		LoadLoc();
-		CMobList->SetColors(0xFFCC3333, 0xFF666666, 0xFF000000);
+		CMobList->SetColors(MQColor(204, 51, 51), MQColor(102, 102, 102), MQColor(0, 0, 0));
 		Tabs->UpdatePage();
 		DrawCombo();
 	}
@@ -537,35 +538,35 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 }
 
 void CDPSAdvWnd::SaveLoc() {
-	if (!GetCharInfo() || GetCharInfo()->Name[0] == '\0')
+	if (!pLocalPC || pLocalPC->Name[0] == '\0')
 		return;
 
-	WritePrivateProfileString(GetCharInfo()->Name, "Saved", "1", INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "Top", GetLocation().top, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "Bottom", GetLocation().bottom, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "Left", GetLocation().left, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "Right", GetLocation().right, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "Alpha", GetAlpha(), INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "FadeToAlpha", GetFadeToAlpha(), INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "CListType", CListType, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "LiveUpdate", LiveUpdate, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "Show", IsVisible(), INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "ShowMeTop", ShowMeTop, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "ShowMeMin", ShowMeMin, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "ShowMeMinNum", ShowMeMinNum, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "UseRaidColors", UseRaidColors, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "ShowTotal", ShowTotal, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "FightIA", FightIA, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "FightTO", FightTO, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "EntTO", EntTO, INIFileName);
-	WritePrivateProfileBool(GetCharInfo()->Name, "UseTBMKOutputs", UseTBMKOutputs, INIFileName);
-	WritePrivateProfileInt(GetCharInfo()->Name, "HistoryLimit", HistoryLimit, INIFileName);
+	WritePrivateProfileString(pLocalPC->Name, "Saved", "1", INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "Top", GetLocation().top, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "Bottom", GetLocation().bottom, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "Left", GetLocation().left, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "Right", GetLocation().right, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "Alpha", GetAlpha(), INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "FadeToAlpha", GetFadeToAlpha(), INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "CListType", CListType, INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "LiveUpdate", LiveUpdate, INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "Show", IsVisible(), INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "ShowMeTop", ShowMeTop, INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "ShowMeMin", ShowMeMin, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "ShowMeMinNum", ShowMeMinNum, INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "UseRaidColors", UseRaidColors, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "ShowTotal", ShowTotal, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "FightIA", FightIA, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "FightTO", FightTO, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "EntTO", EntTO, INIFileName);
+	WritePrivateProfileBool(pLocalPC->Name, "UseTBMKOutputs", UseTBMKOutputs, INIFileName);
+	WritePrivateProfileInt(pLocalPC->Name, "HistoryLimit", HistoryLimit, INIFileName);
 
 	//Save the column widths
 	for (int i = 0; i <= 5; i++) {
 		char szColumn[16] = { 0 };
 		sprintf_s(szColumn, 16, "Column%iWidth", i);
-		WritePrivateProfileInt(GetCharInfo()->Name, szColumn, LTopList->GetColumnWidth(i), INIFileName);
+		WritePrivateProfileInt(pLocalPC->Name, szColumn, LTopList->GetColumnWidth(i), INIFileName);
 	}
 }
 
@@ -597,11 +598,11 @@ void CDPSAdvWnd::LoadSettings() {
 }
 
 void CDPSAdvWnd::LoadLoc(char szChar[256]) {
-	if (!GetCharInfo()) return;
+	if (!pLocalPC) return;
 	if (WrongUI)
 		return;
 	char szName[256] = { 0 };
-	if (!szChar) strcpy_s(szName, GetCharInfo()->Name);
+	if (!szChar) strcpy_s(szName, pLocalPC->Name);
 	else strcpy_s(szName, szChar);
 	Saved = GetPrivateProfileBool(szName, "Saved", false, INIFileName);
 	if (Saved) {
@@ -612,39 +613,41 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 			GetPrivateProfileInt(szName, "Bottom", 0, INIFileName)
 		});
 
-		SetAlpha((BYTE)GetPrivateProfileInt(szName, "Alpha", 0, INIFileName));
-		SetFadeToAlpha((BYTE)GetPrivateProfileInt(szName, "FadeToAlpha", 0, INIFileName));
+		SetAlpha((uint8_t)GetPrivateProfileInt(szName, "Alpha", 0, INIFileName));
+		SetFadeToAlpha((uint8_t)GetPrivateProfileInt(szName, "FadeToAlpha", 0, INIFileName));
 	}
+
 	CListType = GetPrivateProfileInt(szName, "CListType", 0, INIFileName);
-	LiveUpdate = (GetPrivateProfileInt(szName, "LiveUpdate", 0, INIFileName) > 0 ? true : false);
-	WarnedYHO = (GetPrivateProfileInt(szName, "WarnedYHO", 0, INIFileName) > 0 ? true : false);
-	WarnedOHO = (GetPrivateProfileInt(szName, "WarnedOHO", 0, INIFileName) > 0 ? true : false);
-	Debug = (GetPrivateProfileInt(szName, "Debug", 0, INIFileName) > 0 ? true : false);
-	SetVisible((GetPrivateProfileInt(szName, "Show", 1, INIFileName) > 0 ? true : false));
-	ShowMeTop = (GetPrivateProfileInt(szName, "ShowMeTop", 0, INIFileName) > 0 ? true : false);
-	ShowMeMin = (GetPrivateProfileInt(szName, "ShowMeMin", 0, INIFileName) > 0 ? true : false);
+	LiveUpdate = GetPrivateProfileBool(szName, "LiveUpdate", false, INIFileName);
+	WarnedYHO = GetPrivateProfileBool(szName, "WarnedYHO", false, INIFileName);
+	WarnedOHO = GetPrivateProfileBool(szName, "WarnedOHO", false, INIFileName);
+	Debug = GetPrivateProfileBool(szName, "Debug", false, INIFileName);
+	SetVisible(GetPrivateProfileBool(szName, "Show", true, INIFileName));
+	ShowMeTop = GetPrivateProfileBool(szName, "ShowMeTop", false, INIFileName);
+	ShowMeMin = GetPrivateProfileBool(szName, "ShowMeMin", false, INIFileName);
 	ShowMeMinNum = GetPrivateProfileInt(szName, "ShowMeMinNum", 0, INIFileName);
-	UseRaidColors = (GetPrivateProfileInt(szName, "UseRaidColors", 0, INIFileName) > 0 ? true : false);
+	UseRaidColors = GetPrivateProfileBool(szName, "UseRaidColors", false, INIFileName);
 	ShowTotal = GetPrivateProfileInt(szName, "ShowTotal", 0, INIFileName);
 	FightIA = GetPrivateProfileInt(szName, "FightIA", 8, INIFileName);
 	FightTO = GetPrivateProfileInt(szName, "FightTO", 30, INIFileName);
 	EntTO = GetPrivateProfileInt(szName, "EntTO", 8, INIFileName);
-	// FIXME:  All of these are narrowing conversions.
-	MeColor = GetPrivateProfileInt(szName, "MeColor", 0xFF00CC00, INIFileName);
-	MeTopColor = GetPrivateProfileInt(szName, "MeTopColor", 0xFF00CC00, INIFileName);
-	NormalColor = GetPrivateProfileInt(szName, "NormalColor", 0xFFFFFFFF, INIFileName);
-	NPCColor = GetPrivateProfileInt(szName, "NPCColor", 0xFFFFFFFF, INIFileName);
-	TotalColor = GetPrivateProfileInt(szName, "TotalColor", 0xFF66FFFF, INIFileName);
-	EntHover = GetPrivateProfileInt(szName, "EntHover", 0xFFCC3333, INIFileName);
-	EntHighlight = GetPrivateProfileInt(szName, "EntHighlight", 0xFF666666, INIFileName);
-	FightNormal = GetPrivateProfileInt(szName, "FightNormal", NormalColor, INIFileName);
-	FightHover = GetPrivateProfileInt(szName, "FightHover", EntHover, INIFileName);
-	FightHighlight = GetPrivateProfileInt(szName, "FightHighlight", EntHighlight, INIFileName);
-	FightActive = GetPrivateProfileInt(szName, "FightActive", 0xFF00CC00, INIFileName);
-	FightInActive = GetPrivateProfileInt(szName, "FightInActive", 0xFF777777, INIFileName);
-	FightDead = GetPrivateProfileInt(szName, "FightDead", 0xFF330000, INIFileName);
-	UseTBMKOutputs = (GetPrivateProfileInt(szName, "UseTBMKOutputs", 0, INIFileName) > 0 ? true : false);
+	UseTBMKOutputs = GetPrivateProfileBool(szName, "UseTBMKOutputs", false, INIFileName);
 	HistoryLimit = GetPrivateProfileInt(szName, "HistoryLimit", 25, INIFileName);
+
+	// Load colors
+	MeColor = GetPrivateProfileColor(szName, "MeColor", MQColor(0, 204, 0), INIFileName);
+	MeTopColor = GetPrivateProfileColor(szName, "MeTopColor", MQColor(0, 204, 0), INIFileName);
+	NormalColor = GetPrivateProfileColor(szName, "NormalColor", MQColor(255, 255, 255), INIFileName);
+	NPCColor = GetPrivateProfileColor(szName, "NPCColor", MQColor(255, 255, 255), INIFileName);
+	TotalColor = GetPrivateProfileColor(szName, "TotalColor", MQColor(102, 255, 255), INIFileName);
+	EntHover = GetPrivateProfileColor(szName, "EntHover", MQColor(204, 51, 51), INIFileName);
+	EntHighlight = GetPrivateProfileColor(szName, "EntHighlight", MQColor(102, 102, 102), INIFileName);
+	FightNormal = GetPrivateProfileColor(szName, "FightNormal", NormalColor, INIFileName);
+	FightHover = GetPrivateProfileColor(szName, "FightHover", EntHover, INIFileName);
+	FightHighlight = GetPrivateProfileColor(szName, "FightHighlight", EntHighlight, INIFileName);
+	FightActive = GetPrivateProfileColor(szName, "FightActive", MQColor(0, 204, 0), INIFileName);
+	FightInActive = GetPrivateProfileColor(szName, "FightInActive", MQColor(119, 119, 119), INIFileName);
+	FightDead = GetPrivateProfileColor(szName, "FightDead", MQColor(51, 0, 0), INIFileName);
 
 	//Restore the column widths
 	for (int i = 0; i <= 5; i++) {
@@ -668,22 +671,22 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
 	if (Message == XWM_CLOSE) CheckActive();
-	if (Message == XWM_RCLICK && pWnd == (CXWnd*)LTopList) LTopList->SetCurSel(-1);
-	else if (Message == XWM_CLOSE && pWnd == (CXWnd*)DPSWnd) CheckActive();
+	if (Message == XWM_RCLICK && pWnd == LTopList) LTopList->SetCurSel(-1);
+	else if (Message == XWM_CLOSE && pWnd == DPSWnd) CheckActive();
 	else if (Message == XWM_LCLICK) {
-		if (pWnd == (CXWnd*)Tabs) LoadSettings();
-		else if (pWnd == (CXWnd*)CShowMeTop) ShowMeTop = CShowMeTop->bChecked;
-		else if (pWnd == (CXWnd*)CShowMeMin) ShowMeMin = CShowMeMin->bChecked;
-		else if (pWnd == (CXWnd*)CUseRaidColors) UseRaidColors = CUseRaidColors->bChecked;
-		else if (pWnd == (CXWnd*)CLiveUpdate) LiveUpdate = CLiveUpdate->bChecked;
-		else if (pWnd == (CXWnd*)CUseTBMKOutput) UseTBMKOutputs = CUseTBMKOutput->bChecked;
-		//else if (pWnd == (CXWnd*)LTopList) WriteChatf("CurSel: %i", LTopList->GetCurSel());
-		else if (pWnd == (CXWnd*)CShowTotal) {
+		if (pWnd == Tabs) LoadSettings();
+		else if (pWnd == CShowMeTop) ShowMeTop = CShowMeTop->bChecked;
+		else if (pWnd == CShowMeMin) ShowMeMin = CShowMeMin->bChecked;
+		else if (pWnd == CUseRaidColors) UseRaidColors = CUseRaidColors->bChecked;
+		else if (pWnd == CLiveUpdate) LiveUpdate = CLiveUpdate->bChecked;
+		else if (pWnd == CUseTBMKOutput) UseTBMKOutputs = CUseTBMKOutput->bChecked;
+		//else if (pWnd == LTopList) WriteChatf("CurSel: %i", LTopList->GetCurSel());
+		else if (pWnd == CShowTotal) {
 			ShowTotal = CShowTotal->GetCurChoice();
 			if (ShowTotal == 4) ShowTotal = 0;
 			LoadSettings();
 		}
-		else if (pWnd == (CXWnd*)CMobList) {
+		else if (pWnd == CMobList) {
 			CurListMob = nullptr;
 			LTopList->DeleteAll();
 			bool FoundMob = false;
@@ -712,31 +715,31 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 		}
 	}
 	else if (Message == XWM_NEWVALUE) {
-		if (pWnd == (CXWnd*)TShowMeMin) {
+		if (pWnd == TShowMeMin) {
 			if (!TShowMeMin->InputText.empty()) {
 				ShowMeMinNum = GetIntFromString(TShowMeMin->InputText, 0);
 				TShowMeMin->SetSel((int)TShowMeMin->InputText.length(), 0);
 			}
 		}
-		else if (pWnd == (CXWnd*)TFightIA) {
+		else if (pWnd == TFightIA) {
 			if (!TFightIA->InputText.empty()) {
 				FightIA = GetIntFromString(TFightIA->InputText, 0);
 				if (FightIA < 3) FightIA = 8;
 			}
 		}
-		else if (pWnd == (CXWnd*)TFightTO) {
+		else if (pWnd == TFightTO) {
 			if (!TFightTO->InputText.empty()) {
 				FightTO = GetIntFromString(TFightTO->InputText, 0);
 				if (FightTO < 3) FightTO = 30;
 			}
 		}
-		else if (pWnd == (CXWnd*)TEntTO) {
+		else if (pWnd == TEntTO) {
 			if (!TEntTO->InputText.empty()) {
 				EntTO = GetIntFromString(TEntTO->InputText, 0);
 				if (EntTO < 3) EntTO = 8;
 			}
 		}
-		else if (pWnd == (CXWnd*)THistoryLimit) {
+		else if (pWnd == THistoryLimit) {
 			if (!THistoryLimit->InputText.empty()) {
 				HistoryLimit = GetIntFromString(THistoryLimit->InputText, 1);
 				if (HistoryLimit < 1) HistoryLimit = 1;
@@ -1039,9 +1042,8 @@ void AddMyDamage(char* EntName, int Damage1) {
 	}
 	// If I have a pet is it my pet
 	else {
-		PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-		if (pSpawn && pSpawn->PetID != -1) {
-			int iPetID = pSpawn->PetID;
+		if (pLocalPlayer && pLocalPlayer->PetID != -1) {
+			int iPetID = pLocalPlayer->PetID;
 			if (MyDebug) WriteChatf("[AddMyDamage] 3 -%s- -%s- %i", EntName, MyName, iPetID);
 			if (PSPAWNINFO dPet = (PSPAWNINFO)GetSpawnByID(iPetID)) {
 				if (MyDebug) WriteChatf("[AddMyDamage] 4 -%s-", dPet->DisplayedName);
@@ -1159,7 +1161,7 @@ void DPSAdvCmd(PSPAWNINFO pChar, PCHAR szLine) {
 		}
 	}
 	else if (!_stricmp(Arg1, "colors") && !WrongUI)
-		((CXWnd*)pRaidOptionsWnd)->Show(1, 1);
+		pRaidOptionsWnd->Show(1, 1);
 	else if (DPSWnd && !_stricmp(Arg1, "reload") && !WrongUI)
 		DPSWnd->LoadLoc();
 	else if (DPSWnd && !_stricmp(Arg1, "save") && !WrongUI)
@@ -1270,7 +1272,7 @@ void CreateDPSWindow() {
 	if (pSidlMgr->FindScreenPieceTemplate("DPSAdvWnd")) {
 		DPSWnd = new CDPSAdvWnd();
 		if (DPSWnd->IsVisible()) {
-			((CXWnd*)DPSWnd)->Show(1, 1);
+			DPSWnd->Show(1, 1);
 		}
 		char szTitle[MAX_STRING];
 		sprintf_s(szTitle, "DPS Advanced v%.1f", MQ2Version);
@@ -1283,7 +1285,7 @@ void DestroyDPSWindow() {
 	if (DPSWnd) {
 		DPSWnd->SaveLoc();
 		delete DPSWnd;
-		DPSWnd = 0;
+		DPSWnd = nullptr;
 	}
 	CheckActive();
 }
@@ -1453,10 +1455,9 @@ public:
 			return true;
 
 		case MyPetID:
-			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-			if (pSpawn && pSpawn->PetID != -1)
+			if (pLocalPlayer && pLocalPlayer->PetID != -1)
 			{
-				Dest.Int = pSpawn->PetID;
+				Dest.Int = pLocalPlayer->PetID;
 				Dest.Type = mq::datatypes::pIntType;
 				return true;
 			}
@@ -1490,13 +1491,11 @@ PLUGIN_API void SetGameState(int GameState)
 	if (GameState == GAMESTATE_INGAME) {
 		if (!DPSWnd) CreateDPSWindow();
 		// Name could change without the gamestate changing, but it's rare
-		if (GetCharInfo()) {
-			PSPAWNINFO pSpawn = GetCharInfo()->pSpawn;
-			if (pSpawn) {
-				strcpy_s(MyName, pSpawn->DisplayedName);
-				return;
-			}
+		if (pLocalPC && pLocalPlayer) {
+			strcpy_s(MyName, pLocalPlayer->DisplayedName);
+			return;
 		}
+
 		// MyName is used for matching DPS and we don't want false positive matches.
 		strcpy_s(MyName, "NameNotFound");
 	}
