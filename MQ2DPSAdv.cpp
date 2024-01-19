@@ -1635,7 +1635,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 
 		case USERCOLOR_SPELL_CRIT:               // Color: 302 - Direct Damage Crits (Yours)
 			HandleNonMelee(Line);
-#if !IS_EXPANSION_LEVEL(EXPANSION_LEVEL_COTF) // Not contained in ROF2
+#if !IS_EXPANSION_LEVEL(EXPANSION_LEVEL_COTF) // DD/Dots Split in LS, only need to handle dots for emu
 			// This requires checking both handle nonmelee and dot
 			// Using both of these here can cause an error in debug reporting, but that is expected.
 			HandleDOT(Line);
@@ -1722,6 +1722,7 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 	
 		case USERCOLOR_FLURRY:                   // Color: 356 - Flurry (Yours)
 			HandleYouHitOther(Line);
+			break;
 
 		case USERCOLOR_DEBUG:                    // Color: 357
 			break;
