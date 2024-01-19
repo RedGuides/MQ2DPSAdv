@@ -1549,207 +1549,265 @@ PLUGIN_API bool OnIncomingChat(const char* Line, DWORD Color)
 		if (Debug) {
 			char szMsg[MAX_STRING] = { 0 };
 			strcpy_s(szMsg, Line);
-			if (strchr(szMsg, '\x12')) {
-				// Message includes link (item tags/spell), must clean first
-				const int len = (int)strlen(szMsg);
 
-				auto pszCleanOrg = std::make_unique<char[]>(len + 64);
-				char* szClean = pszCleanOrg.get();
-
-				strcpy_s(szClean, len + 64, szMsg);
-
-				CXStr out = CleanItemTags(szClean, false);
-				strcpy_s(szClean, len + 64, out.c_str());
-				strncpy_s(szMsg, szClean, MAX_STRING - 1);
+			if (strchr(szMsg, '\x12'))
+			{
+				StripTextLinks(szMsg);
 			}
 			WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, szMsg);
 		}
-		switch (Color) {
-		case 0://Color: 0 - Task Updates
-
-		case 2: //Color: 2 - Consider Message - Green
-
-		case 4: //Color: 4 - Consider messages - Dark Blue
-
-		case 6://Color: 6 - Consider message - Grey
-
-		case 10://Color: 10 - Merchant says "Hello there, Soandso. How about a nice Iron Ration?"
-
-		case 13://Color: 13 - Attack is on/off - Other invites to raid.
-
-		case 15://Color: 15 - Help messages, Consider Message - Yellow (right click on the NPC to consider it, Targeted (NPC): a slatescale serpent, You have gained an ability point)
-
-		case 18://Color: 18 - Consider message - Light blue
-
-		case 20://Color: 20 - You regain some experience from resurrection.
-
-		case 256://Color: 256 - Other player /say messages
-		case 257://Color: 257 - Other /tell's you
-		case 258://Color: 258 - Other tells /group
-		case 259://Color: 259 - Guild Chat - Incoming
-		case 260://Color: 260 - Other /ooc
-		case 261://Color: 261 - Other /auction
-		case 262://Color: 262 - Other /shout
-		case 263://Color: 263 - other Emote commands/eat food messages (/cry, Chomp, chomp, chomp... Soandso takes a bite...etc)
-		case 264://Color: 264 - You begin casting
+		switch (Color)
+		{
+		case COLOR_DEFAULT:                      // Color: 0   - Task Updates
+		case CONCOLOR_GREEN:                     // Color: 2   - Consider Message - Green
+		case CONCOLOR_BLUE:                      // Color: 4   - Consider messages - Dark Blue
+		case CONCOLOR_GREY:                      // Color: 6   - Consider message - Grey
+		case CONCOLOR_WHITE:                     // Color: 10  - Merchant says "Hello there, Soandso. How about a nice Iron Ration?"
+		case CONCOLOR_RED:                       // Color: 13  - Attack is on/off - Other invites to raid.
+		case CONCOLOR_YELLOW:                    // Color: 15  - Help messages, Consider Message - Yellow (right click on the NPC to consider it, Targeted (NPC): a slatescale serpent, You have gained an ability point)
+		case CONCOLOR_LIGHTBLUE:                 // Color: 18  - Consider message - Light blue
+		case CONCOLOR_BLACK:                     // Color: 20  - You regain some experience from resurrection.
+		case USERCOLOR_SAY:                      // Color: 256 - Other player /say messages
+		case USERCOLOR_TELL:                     // Color: 257 - Other /tell's you
+		case USERCOLOR_GROUP:                    // Color: 258 - Other tells /group
+		case USERCOLOR_GUILD:                    // Color: 259 - Guild Chat - Incoming
+		case USERCOLOR_OOC:                      // Color: 260 - Other /ooc
+		case USERCOLOR_AUCTION:                  // Color: 261 - Other /auction
+		case USERCOLOR_SHOUT:                    // Color: 262 - Other /shout
+		case USERCOLOR_EMOTE:                    // Color: 263 - other Emote commands/eat food messages (/cry, Chomp, chomp, chomp... Soandso takes a bite...etc)
+		case USERCOLOR_SPELLS:                   // Color: 264 - You begin casting
 			break;
-		case 265://Color: 265 - You hit other (melee/melee crit)
+
+		case USERCOLOR_YOU_HIT_OTHER:            // Color: 265 - You hit other (melee/melee crit)
 			HandleYouHitOther(Line);
 			break;
-		case 266://Color: 266 - Other hits you
-		case 267://Color: 267 - You miss other
-		case 268://Color: 268 - Riposte/Dodge/Other Misses You
-		case 269://Color: 269 - Announcement (GM Events etc)
-		case 270://Color: 270 - You have become better at [Skill]! (Number)
-		case 271://Color: 271 - Song wear off message?? (Ritual Scarification wear off message)
-		case 272://Color: 272 - Pet thanks for stuff you give them?
-		case 273://Color: 273 - Charged mercenary upkeep/Group Invites/Joins/Banker tells you welcome to bank.
-		case 274://Color: 274 - Faction hits
-		case 275://Color: 275 - [Merchant] tells you, that'll be [price] for the [item]
-		case 276://Color: 276 - You sold [QTY] [Item Name] to [Player] for [Amount]/You Purchased [Item Name] from [NPC] for [Amount]
-		case 277://Color: 277 - Your death message.
-		case 278://Color: 278 - Other PC death message.
+
+		case USERCOLOR_OTHER_HIT_YOU:            // Color: 266 - Other hits you
+		case USERCOLOR_YOU_MISS_OTHER:           // Color: 267 - You miss other
+		case USERCOLOR_OTHER_MISS_YOU:           // Color: 268 - Riposte/Dodge/Other Misses You
+		case USERCOLOR_DUELS:                    // Color: 269 - Announcement (GM Events etc)
+		case USERCOLOR_SKILLS:                   // Color: 270 - You have become better at [Skill]! (Number)
+		case USERCOLOR_DISCIPLINES:              // Color: 271 - Song wear off message?? (Ritual Scarification wear off message)
+		case USERCOLOR_UNUSED001:                // Color: 272 - Pet thanks for stuff you give them?
+		case USERCOLOR_DEFAULT:                  // Color: 273 - Charged mercenary upkeep/Group Invites/Joins/Banker tells you welcome to bank.
+		case USERCOLOR_FACTION:                  // Color: 274 - Faction hits
+		case USERCOLOR_MERCHANT_OFFER:           // Color: 275 - [Merchant] tells you, that'll be [price] for the [item]
+		case USERCOLOR_MERCHANT_EXCHANGE:        // Color: 276 - You sold [QTY] [Item Name] to [Player] for [Amount]/You Purchased [Item Name] from [NPC] for [Amount]
+		case USERCOLOR_YOUR_DEATH:               // Color: 277 - Your death message.
+		case USERCOLOR_OTHER_DEATH:              // Color: 278 - Other PC death message.
 			break;
-		case 279://Color: 279 - Others Hits Other
-			HandleOtherHitOther(Line); //Other hits other
+
+		case USERCOLOR_OTHER_HIT_OTHER:          // Color: 279 - Others Hits Other
+			HandleOtherHitOther(Line);
 			break;
-		case 280://Color: 280 - Other Misses Other
-		case 281://Color: 281 - /who
-		case 282://Color: 282 - Other /yell
+
+		case USERCOLOR_OTHER_MISS_OTHER:         // Color: 280 - Other Misses Other
+		case USERCOLOR_WHO:                      // Color: 281 - /who
+		case USERCOLOR_YELL:                     // Color: 282 - Other /yell
 			break;
-		case 283://Color: 283 - Your Non-Melee spell dmg.
-			HandleNonMelee(Line); //Your Non-melee
+
+		case USERCOLOR_NON_MELEE:                // Color: 283 - Your Non-Melee spell dmg.
+			HandleNonMelee(Line); 
 			break;
-		case 284://Color: 284 - Spell wear off messages
-		case 285://Color: 285 - Coin collection/Split
-		case 286://Color: 286 - Loot Related (Master looter actions, you loot)
-		case 287://Color: 287 - Dice Rolls
-		case 288://Color: 288 - Other Starts Casting Messages
-		case 289://Color: 289 - Target is out of range, get closer/Interupt/Fizzle/other spell failure
-		case 290://Color: 290 - Channel Lists after logged in
-		case 291://Color: 291 - Chat Channel 1 - Incoming
-		case 292://Color: 292 - Chat Channel 2 - Incoming
-		case 293://Color: 293 - Chat Channel 3 - Incoming
-		case 294://Color: 294 - Chat Channel 4 - Incoming
-		case 295://Color: 295 - Chat Channel 5 - Incoming
-		case 296://Color: 296 - Chat Channel 6 - Incoming
-		case 297://Color: 297 - Chat Channel 7 - Incoming
-		case 298://Color: 298 - Chat Channel 8 - Incoming
-		case 299://Color: 299 - Chat Channel 9 - Incoming
-		case 300://Color: 300 - Chat Channel 10 - Incoming
+
+		case USERCOLOR_SPELL_WORN_OFF:           // Color: 284 - Spell wear off messages
+		case USERCOLOR_MONEY_SPLIT:              // Color: 285 - Coin collection/Split
+		case USERCOLOR_LOOT:                     // Color: 286 - Loot Related (Master looter actions, you loot)
+		case USERCOLOR_RANDOM:                   // Color: 287 - Dice Rolls
+		case USERCOLOR_OTHERS_SPELLS:            // Color: 288 - Other Starts Casting Messages
+		case USERCOLOR_SPELL_FAILURE:            // Color: 289 - Target is out of range, get closer/Interupt/Fizzle/other spell failure
+		case USERCOLOR_CHAT_CHANNEL:             // Color: 290 - Channel Lists after logged in
+		case USERCOLOR_CHAT_1:                   // Color: 291 - Chat Channel 1 - Incoming
+		case USERCOLOR_CHAT_2:                   // Color: 292 - Chat Channel 2 - Incoming
+		case USERCOLOR_CHAT_3:                   // Color: 293 - Chat Channel 3 - Incoming
+		case USERCOLOR_CHAT_4:                   // Color: 294 - Chat Channel 4 - Incoming
+		case USERCOLOR_CHAT_5:                   // Color: 295 - Chat Channel 5 - Incoming
+		case USERCOLOR_CHAT_6:                   // Color: 296 - Chat Channel 6 - Incoming
+		case USERCOLOR_CHAT_7:                   // Color: 297 - Chat Channel 7 - Incoming
+		case USERCOLOR_CHAT_8:                   // Color: 298 - Chat Channel 8 - Incoming
+		case USERCOLOR_CHAT_9:                   // Color: 299 - Chat Channel 9 - Incoming
+		case USERCOLOR_CHAT_10:                  // Color: 300 - Chat Channel 10 - Incoming
 			break;
-		case 301://Color: 301 - Critical (YouHitOther)
+
+		case USERCOLOR_MELEE_CRIT:               // Color: 301 - Critical (YouHitOther)
 			HandleYouHitOther(Line);
 			break;
-		case 302://Color: 302 - Critical Dot & Spells (Yours)
+
+		case USERCOLOR_SPELL_CRIT:               // Color: 302 - Direct Damage Crits (Yours)
+			HandleNonMelee(Line);
+#if !IS_EXPANSION_LEVEL(EXPANSION_LEVEL_COTF) // Not contained in ROF2
 			// This requires checking both handle nonmelee and dot
 			// Using both of these here can cause an error in debug reporting, but that is expected.
-			HandleNonMelee(Line);
 			HandleDOT(Line);
+#endif
 			break;
-		case 303://Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
+
+		case USERCOLOR_TOO_FAR_AWAY:             // Color: 303 - Errors (You must first click on the being you wish to attack, Can't hit them from here)
+		case USERCOLOR_NPC_RAMPAGE:              // Color: 304 - NPC Rampage
 			break;
-		case 305://Color: 305 - Other Pet Flurry (OtherHitOther)
+
+		case USERCOLOR_NPC_FLURRY:               // Color: 305 - Other Pet Flurry (OtherHitOther)
 			HandleOtherHitOther(Line);
 			break;
-		case 306://Color: 306 - Enrage (Showed for pet)
-		case 307://Color: 307 - Your /say messages, mob advances messages.
-		case 308://Color: 308 - You tell other.
-		case 309://Color: 309 - Group conversation
-		case 310://Color: 310 - Guild conversation - Outgoing
-		case 311://Color: 311 - you /ooc
-		case 312://Color: 312 - you /auction
-		case 313://Color: 313 - you shout.
-		case 314://Color: 314 - /emote messages
-		case 315://Color: 315 - Chat Channel 1 - Outgoing
-		case 316://Color: 316 - Chat Channel 2 - Outgoing
-		case 317://Color: 317 - Chat Channel 3 - Outgoing
-		case 318://Color: 318 - Chat Channel 4 - Outgoing
-		case 319://Color: 319 - Chat Channel 5 - Outgoing
-		case 320://Color: 320 - Chat Channel 6 - Outgoing
-		case 321://Color: 321 - Chat Channel 7 - Outgoing
-		case 322://Color: 322 - Chat Channel 8 - Outgoing
-		case 323://Color: 323 - Chat Channel 9 - Outgoing
-		case 324://Color: 324 - Chat Channel 10 - Outgoing
 
-		case 327://Color: 327 - Any /rsay
+		case USERCOLOR_NPC_ENRAGE:               // Color: 306 - Enrage (Showed for pet)
+		case USERCOLOR_ECHO_SAY:                 // Color: 307 - Your /say messages, mob advances messages.
+		case USERCOLOR_ECHO_TELL:                // Color: 308 - You tell other.
+		case USERCOLOR_ECHO_GROUP:               // Color: 309 - Group conversation
+		case USERCOLOR_ECHO_GUILD:               // Color: 310 - Guild conversation - Outgoing
+		case USERCOLOR_ECHO_OOC:                 // Color: 311 - you /ooc
+		case USERCOLOR_ECHO_AUCTION:             // Color: 312 - you /auction
+		case USERCOLOR_ECHO_SHOUT:               // Color: 313 - you shout.
+		case USERCOLOR_ECHO_EMOTE:               // Color: 314 - /emote messages
+		case USERCOLOR_ECHO_CHAT_1:              // Color: 315 - Chat Channel 1 - Outgoing
+		case USERCOLOR_ECHO_CHAT_2:              // Color: 316 - Chat Channel 2 - Outgoing
+		case USERCOLOR_ECHO_CHAT_3:              // Color: 317 - Chat Channel 3 - Outgoing
+		case USERCOLOR_ECHO_CHAT_4:              // Color: 318 - Chat Channel 4 - Outgoing
+		case USERCOLOR_ECHO_CHAT_5:              // Color: 319 - Chat Channel 5 - Outgoing
+		case USERCOLOR_ECHO_CHAT_6:              // Color: 320 - Chat Channel 6 - Outgoing
+		case USERCOLOR_ECHO_CHAT_7:              // Color: 321 - Chat Channel 7 - Outgoing
+		case USERCOLOR_ECHO_CHAT_8:              // Color: 322 - Chat Channel 8 - Outgoing
+		case USERCOLOR_ECHO_CHAT_9:              // Color: 323 - Chat Channel 9 - Outgoing
+		case USERCOLOR_ECHO_CHAT_10:             // Color: 324 - Chat Channel 10 - Outgoing
+		case USERCOLOR_AVATAR_CMD:               // Color: 325
+		case USERCOLOR_LINK:                     // Color: 326
+		case USERCOLOR_RAID:                     // Color: 327 - Any /rsay
 			break;
-		case 328://Color: 328 - My pet hits (OtherHitOther)
+
+		case USERCOLOR_PET:                      // Color: 328 - My pet hits (OtherHitOther)
 			HandleOtherHitOther(Line); // Your Pet
 			break;
-		case 329://Color: 329 - Damage Shield hits you.
-		case 330://Color: 330 - Raid Role messages.
+
+		case USERCOLOR_DAMAGESHIELD:             // Color: 329 - Damage Shield hits you.
+		case USERCOLOR_LEADER:                   // Color: 330 - Raid Role messages.
 			break;
-		case 331://Color: 331 - My Pet Flurry (Other Hit Other) My Pet
-		case 332://Color: 332 - My Pet Critical (Other Hit Other)
+
+		case USERCOLOR_PETRAMPFLURRY:            // Color: 331 - My Pet Flurry (Other Hit Other) My Pet
+		case USERCOLOR_PETCRITS:                 // Color: 332 - My Pet Critical (Other Hit Other)
 			HandleOtherHitOther(Line);
 			break;
-		case 333://Color: 333 - Item Focus messages
-		case 334://Color: 334 - You gain Experience messages
-		case 335://Color: 335 - You have already finished collecting [Item].
+
+		case USERCOLOR_FOCUS:                    // Color: 333 - Item Focus messages
+		case USERCOLOR_XP:                       // Color: 334 - You gain Experience messages
+		case USERCOLOR_SYSTEM:                   // Color: 335 - You have already finished collecting [Item].
 			break;
-		case 336://Color: 336 - Pet Non-Melee/Pet beings to cast
-			HandleNonMelee(Line); //All pet non-melee (yours and others)
+
+		case USERCOLOR_PET_SPELLS:               // Color: 336 - Pet Non-Melee/Pet beings to cast
+			HandleNonMelee(Line); // All pet non-melee (yours and others)
 			break;
-		case 337://Color: 337 - Pet messages (YourPet says, "Following you master.")
 
-		case 339://Color: 339 - Strike thru (yours and others)
-		case 340://Color: 340 - You are stunned/unstunned messages.
-
-		case 342://Color: 342 - fellowship messages
-		case 343://Color: 343 - corpse emote
-
-		case 345://Color: 345 - Guild plants banner
-		case 346://Color: 346 - Mercenary tells group
-
-		case 348://Color: 348 - Achievement - you and other.
-		case 349://Color: 349 - Achievement - Guildmate
+		case USERCOLOR_PET_RESPONSES:            // Color: 337 - Pet messages (YourPet says, "Following you master.")
+		case USERCOLOR_ITEM_SPEECH:              // Color: 338
+		case USERCOLOR_STRIKETHROUGH:            // Color: 339 - Strike thru (yours and others)
+		case USERCOLOR_STUN:                     // Color: 340 - You are stunned/unstunned messages.
+		case USERCOLOR_SWARM_PET_DEATH:          // Color: 341
+		case USERCOLOR_FELLOWSHIP:               // Color: 342 - fellowship messages
+		case USERCOLOR_NPC_SPEECH:               // Color: 343 - corpse emote
+		case USERCOLOR_NPC_SPEECH_TO_YOU:        // Color: 344
+		case USERCOLOR_GUILD_MSG:                // Color: 345 - Guild plants banner
 			break;
-		case 356://Color: 356 - Flurry (Yours)
+
+#if IS_EXPANSION_LEVEL(EXPANSION_LEVEL_COTF) // Not contained in ROF2
+		case USERCOLOR_MERCENARY_GRP:            // Color: 346 - Mercenary tells group
+		case USERCOLOR_ACHIEVEMENT:              // Color: 347
+		case USERCOLOR_ACHIEVEMENTS_YOU:         // Color: 348 - Achievement - you and other.
+		case USERCOLOR_ACHIEVEMENTS_OTHERS:      // Color: 349 - Achievement - Guildmate
+		case USERCOLOR_PVP:                      // Color: 350
+		case USERCOLOR_HOTBUTTON_COOLDOWN:       // Color: 351
+		case USERCOLOR_AGGRO_LOW:                // Color: 352
+		case USERCOLOR_AGGRO_WARNING:            // Color: 353
+		case USERCOLOR_AGGRO_MOST:               // Color: 354
+		case USERCOLOR_DIALOG_LINK:              // Color: 355
+			break;
+	
+		case USERCOLOR_FLURRY:                   // Color: 356 - Flurry (Yours)
 			HandleYouHitOther(Line);
-			break;
-		case 358://Color: 358 - NPC Death message
-			HandleDeath(Line); //NPC died is Color: 358 Your death is Color: 277(this was 278)
-			break;
-		case 360://Color: 360 - Other Rolls Dice.
-		case 361://Color: 361 - Injured by falling (self)
-		case 362://Color: 362 - Injured by falling (other)
-			break;
-		case 363://Color: 363 - Your damage shield
-			//HandleNonMelee(Line); //Your Damage shield
-		case 364://Color: 364 - Other's damage shield
-			HandleNonMelee(Line); //Other's damage shield
-			break;
-		case 366://Color: 366 - Your [Spell Name] has been overwritten - Detrimental
-		case 367://Color: 367 - Your [Spell Name] has been overwritten - Beneficial
-		case 368://Color: 368 - You cannot use that command right now (clicking disc too fast)
-		case 369://Color: 369 - You can use [Ability Name] again in [Time till you can use it again]
-		case 370://Color: 370 - AA Reuse Timer failed
-		case 371://Color: 371 - Destroy item message
 
-		case 373://Color: 373 - Heal over time on other?
-		case 374://Color: 374 - You heal other
-		case 375://Color: 375 - Other buffs other/Other Heal Other
+		case USERCOLOR_DEBUG:                    // Color: 357
 			break;
-		case 376://Color: 376 - Your DoT's
-			//HandleDOT(Line); //Your DoTs
-		case 377://Color: 377 - Other's DoT's
-			HandleDOT(Line); //Your DoTs
+
+		case USERCOLOR_NPC_DEATH:                // Color: 358 - NPC Death message
+			HandleDeath(Line);
 			break;
-		case 378://Color: 378 - Song messages - Soandso begins to sing a song. <Selo's Sonata I>
+
+		case USERCOLOR_DICE_OTHER:               // Color: 359
+		case USERCOLOR_DICE_GROUP:               // Color: 360 - Other Rolls Dice.
+		case USERCOLOR_FALL_DAMAGE_SELF:         // Color: 361 - Injured by falling (self)
+		case USERCOLOR_FALL_DAMAGE_OTHER:        // Color: 362 - Injured by falling (other)
 			break;
-		case 379://Color: 379 - Others Non-Melee
-			HandleNonMelee(Line); //Others Non-melee
+
+		case USERCOLOR_DAMAGESHIELD_SELF:        // Color: 363 - Your damage shield
+		case USERCOLOR_DAMAGESHIELD_OTHER:       // Color: 364 - Other's damage shield
+			HandleNonMelee(Line);
 			break;
-		case 380://Color: 380 - Your spell messages
+
+		case USERCOLOR_EVENT:                    // Color: 365
+		case USERCOLOR_OVERWRITTEN_DET:          // Color: 366 - Your [Spell Name] has been overwritten - Detrimental
+		case USERCOLOR_OVERWRITTEN_BENE:         // Color: 367 - Your [Spell Name] has been overwritten - Beneficial
+		case USERCOLOR_CANT_USE_COMMAND:         // Color: 368 - You cannot use that command right now (clicking disc too fast)
+		case USERCOLOR_ABILITY_COOLDOWN:         // Color: 369 - You can use [Ability Name] again in [Time till you can use it again]
+		case USERCOLOR_AA_REUSE_TIMER:           // Color: 370 - AA Reuse Timer failed
+		case USERCOLOR_DESTROY_ITEM:             // Color: 371 - Destroy item message
+		case USERCOLOR_AURAS_YOU:                // Color: 372
+		case USERCOLOR_AURAS_OTHER:              // Color: 373 - Heal over time on other?
+		case USERCOLOR_HEALS_YOU:                // Color: 374 - You heal other
+		case USERCOLOR_HEALS_OTHERS:             // Color: 375 - Other buffs other/Other Heal Other
 			break;
+
+		case USERCOLOR_DOTS_YOURS:               // Color: 376 - Your DoT's
+		case USERCOLOR_DOTS_OTHERS:              // Color: 377 - Other's DoT's
+			HandleDOT(Line);
+			break;
+
+		case USERCOLOR_BARD_SONG_PETS:           // Color: 378 - Song messages - Soandso begins to sing a song. <Selo's Sonata I>
+			break;
+
+		case USERCOLOR_DIRECT_DAMAGE_OTHERS:     // Color: 379 - Others Non-Melee
+			HandleNonMelee(Line);
+			break;
+
+		case USERCOLOR_SPELL_MESSAGES:           // Color: 380 - Your spell messages
+		case USERCOLOR_FACTION_LINK:             // Color: 381 - Faction Links
+		case USERCOLOR_TAUNT_MESSAGES:           // Color: 382 - Taunt Messages
+		case USERCOLOR_DISCIPLINES_OTHER:        // Color: 383 - Combat Abilities / Disciplines (Others)
+		case USERCOLOR_ITEM_STAT_POSITIVE:       // Color: 384 - Item Stat Positive
+		case USERCOLOR_ITEM_STAT_NEGATIVE:       // Color: 385 - Item Stat Negative
+		case USERCOLOR_ENCOUNTER_LOCK_ATTACKABLE: // Color: 386 - Encounter Lock Attackable
+		case USERCOLOR_ENCOUNTER_LOCK_UNATTACKABLE: // Color 387 - Encounter Lock Unattackable
+		case USERCOLOR_FOOD_AND_DRINK:           // Color: 388 - Food And Drink
+		case USERCOLOR_RAID_VICTORY:             // Color: 389 - Raid Victory
+			break;
+#endif
+#if IS_EXPANSION_LEVEL(EXPANSION_LEVEL_LS)
+		case USERCOLOR_DIRECT_DAMAGE_YOU:        // Color: 397 - Direct Damage (Yours)
+		case USERCOLOR_DIRECT_DAMAGE_OTHERS_CRITICAL: // Color 398 - Direct Damage (Other Critical Hits)
+			HandleNonMelee(Line);
+			break;
+
+		case USERCOLOR_DOT_YOURS_CRITICAL:       // Color: 399 - DoTs (Your Critical Hits)
+		case USERCOLOR_DOT_OTHERS_CRITICAL:      // Color: 400 - DoTs (Other Critical Hits)
+			HandleDOT(Line);
+			break;
+
+		case USERCOLOR_DOT_DAMAGE_TAKEN:         // Color: 401 - DoTs (You Being Hit)
+		case USERCOLOR_HEALS_RECEIVED:           // Color: 402 - Heals Received
+		case USERCOLOR_HEALS_YOURS_CRITICAL:     // Color: 403 - Heals (Your Critical Heals)
+		case USERCOLOR_HEALS_OTHERS_CRITICAL:    // Color: 404 - Heals (Other Critical Heals)
+			break;
+
+		case USERCOLOR_MELEE_OTHERS_CRITICAL:    // Color: 405 - Others Hits (Critical)
+			HandleOtherHitOther(Line);
+			break;
+#endif // IS_EXPANSION_LEVEL(EXPANSION_LEVEL_LS)
+
 		default:
-			//Don't Know these, lets see what it is.
+			// Don't Know these, lets see what it is.
 			if (Debug) WriteChatf("[\ar%i\ax]\a-t: \ap%s", Color, Line);
 			break;
 		}
 	}
-	return 0;
+
+	return false;
 }
 
 bool CheckInterval() {
