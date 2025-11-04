@@ -3,10 +3,10 @@
 
 #pragma once
 
-#include <mq/base/Color.h>
+#include "mq/base/Color.h"
 
-char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", " rends ", " gores ", " stabs ", "" };
-char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", " rend ", " gore ", ""};
+const char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", " rends ", " gores ", " stabs ", "" };
+const char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", " rend ", " gore ", ""};
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
 enum { NOTOTAL, TOTALABOVE, TOTALSECOND, TOTALBOTTOM };
 
