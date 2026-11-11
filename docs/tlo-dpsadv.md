@@ -10,9 +10,9 @@ Returns information on whether plugin is loaded, and holds the MQ2DPSAdv data ty
 
 ## Forms
 <!--tlo-forms-start-->
-### {{ renderMember(type='bool', name='DPSAdv') }}
-
-:   Returns true if plugin is on
+/// member | bool DPSAdv
+Returns true if plugin is on
+///
 
 <!--tlo-forms-end-->
 

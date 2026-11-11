@@ -10,41 +10,41 @@ Returns information about status, time, your DPS and your pet's DPS.
 
 ## Members
 <!--dt-members-start-->
-### {{ renderMember(type='int64', name='MyDamage') }}
+/// member | int64 MyDamage
+My total damage
+///
 
-:   My total damage
+/// member | int64 PetDamage
+My pet's damage.
+///
 
-### {{ renderMember(type='int64', name='PetDamage') }}
+/// member | int64 TotalDamage
+The combined value of mine and my pet's damage.
+///
 
-:   My pet's damage.
+/// member | float MyDPS
+My "Damage Per Second"
+///
 
-### {{ renderMember(type='int64', name='TotalDamage') }}
+/// member | float PetDPS
+My pet's "Damage Per Second"
+///
 
-:   The combined value of mine and my pet's damage.
+/// member | float TotalDPS
+Combined "Damage Per Second" from mine and my pet's damage.
+///
 
-### {{ renderMember(type='float', name='MyDPS') }}
+/// member | int TimeElapsed
+The time elapsed of a fight.
+///
 
-:   My "Damage Per Second"
+/// member | int MyStatus
+Returns your "MyActive" status 0 for off, 1 for on.
+///
 
-### {{ renderMember(type='float', name='PetDPS') }}
-
-:   My pet's "Damage Per Second"
-
-### {{ renderMember(type='float', name='TotalDPS') }}
-
-:   Combined "Damage Per Second" from mine and my pet's damage.
-
-### {{ renderMember(type='int', name='TimeElapsed') }}
-
-:   The time elapsed of a fight.
-
-### {{ renderMember(type='int', name='MyStatus') }}
-
-:   Returns your "MyActive" status 0 for off, 1 for on.
-
-### {{ renderMember(type='int', name='MyPetID') }}
-
-:   Returns your pet's ID.
+/// member | int MyPetID
+Returns your pet's ID.
+///
 
 <!--dt-members-end-->
 
