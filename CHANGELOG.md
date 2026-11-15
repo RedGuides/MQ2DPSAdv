@@ -1,3 +1,20 @@
+11/14/2026   1.7.00 (watwut)
+Fix memory leak when old fights are cleaned up, and free all fights when the plugin unloads.
+Fix non-melee damage being credited to you when your name only appeared somewhere in the line
+  (e.g. "<YourName>`s pet hit ..." or a player whose name contains yours).
+Fix duplicate rows for pets owned by NPCs.
+Fix possible crash when "Use Raid Colors" is on and the raid window doesn't exist.
+Fix possible game crash on unusual chat lines: the damage/death parsers now skip lines whose names
+  don't fit instead of overflowing.
+The DPS window now stops tracking damage when it is closed (it kept parsing until the next zone/reload).
+  Your own /dpsadv mystart capture is not affected.
+/dpsadv mystart capture now only stops on your own kill or your target's death, not on any NPC death nearby.
+Fix ShowMeMin being off by one rank.
+Fix crash (or settings being overwritten) when closing the window with an outdated UI file.
+Fix uninitialized fight data that gave wrong SDPS numbers and erratic cleanup of old fights.
+Fix a selected fight in the dropdown being replaced whenever an old fight was cleaned up.
+Fix the newest fight not being selectable in the dropdown.
+
 08/22/2020   1.5.00 (Knightly)
 Fix naming collision where a non-PC having the same name as a PC would crash
 Add HistoryLimit setting to the ini which allows you to specify how many mobs for which to keep a DPS history.

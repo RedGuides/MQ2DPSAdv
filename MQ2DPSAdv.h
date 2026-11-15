@@ -126,6 +126,10 @@ public:
 
 	DPSMob();
 	DPSMob(const char* MobName, size_t MobLen);
+	~DPSMob();
+	// Owns the entries in EntList, so copying would double delete them.
+	DPSMob(const DPSMob&) = delete;
+	DPSMob& operator=(const DPSMob&) = delete;
 	void Init();
 	void AddDamage(int Damage1);
 	void GetSpawn();
