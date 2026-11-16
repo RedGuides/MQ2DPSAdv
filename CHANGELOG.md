@@ -1,4 +1,8 @@
-11/14/2026   1.7.00 (watwut)
+11/15/2026   1.7.00 (watwut)
+Window position, size and settings are now saved automatically when you move/resize the window
+  or change a setting,
+  instead of only on /dpsadv save or when the window is destroyed (which often never happened, so the window kept resetting).
+  This includes window transparency, column widths and showing/hiding the window.
 Fix memory leak when old fights are cleaned up, and free all fights when the plugin unloads.
 Fix non-melee damage being credited to you when your name only appeared somewhere in the line
   (e.g. "<YourName>`s pet hit ..." or a player whose name contains yours).

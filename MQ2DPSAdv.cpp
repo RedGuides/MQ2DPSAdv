@@ -551,6 +551,40 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 	}
 }
 
+int CDPSAdvWnd::OnMove(const CXRect& rect) {
+	MarkSettingsDirty();
+	return CCustomWnd::OnMove(rect);
+}
+
+int CDPSAdvWnd::OnResize(int w, int h) {
+	MarkSettingsDirty();
+	return CCustomWnd::OnResize(w, h);
+}
+
+void CDPSAdvWnd::MarkSettingsDirty() {
+	SettingsDirty = true;
+	SettingsChangedAt = GetTickCount64();
+}
+
+// Moves/resizes fire every frame while dragging and edit boxes fire on every keystroke,
+// so wait until nothing has changed for a second before writing the ini.
+void CDPSAdvWnd::SaveIfSettled() {
+	constexpr uint64_t SettleMs = 1000;
+	std::vector<int> watched = { (int)GetAlpha(), (int)GetFadeToAlpha(), IsVisible() ? 1 : 0 };
+	if (LTopList) {
+		for (int i = 0; i <= 5 && i < LTopList->GetColumnCount(); i++)
+			watched.push_back(LTopList->GetColumnWidth(i));
+	}
+	if (watched != LastWatched) {
+		if (!LastWatched.empty()) MarkSettingsDirty();
+		LastWatched = std::move(watched);
+	}
+	if (SettingsDirty && GetTickCount64() - SettingsChangedAt >= SettleMs) {
+		SettingsDirty = false;
+		SaveLoc();
+	}
+}
+
 void CDPSAdvWnd::SaveLoc() {
 	if (!pLocalPC || pLocalPC->Name[0] == '\0')
 		return;
@@ -685,6 +719,9 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
 	if (Message == XWM_CLOSE) CheckActive();
+	// Checkbox/combo clicks and edit box changes update settings; save them once things settle.
+	// (Clicks on the list itself don't change anything worth saving.)
+	if ((Message == XWM_LCLICK || Message == XWM_NEWVALUE) && pWnd != LTopList) MarkSettingsDirty();
 	if (Message == XWM_RCLICK && pWnd == LTopList) LTopList->SetCurSel(-1);
 	else if (Message == XWM_CLOSE && pWnd == DPSWnd) CheckActive();
 	else if (Message == XWM_LCLICK) {
@@ -1943,6 +1980,7 @@ PLUGIN_API void OnPulse() {
 	// XWM_CLOSE arrives before the window is hidden, and other things can hide it too
 	// (/windowstate, macros), so keep Active in step with visibility here.
 	CheckActive();
+	if (DPSWnd && !WrongUI) DPSWnd->SaveIfSettled();
 
 	if (Active && !WrongUI) {
 		if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();

@@ -5,6 +5,8 @@
 
 #include "mq/base/Color.h"
 
+#include <vector>
+
 const char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", " rends ", " gores ", " stabs ", "" };
 const char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", " rend ", " gore ", ""};
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
@@ -164,6 +166,13 @@ public:
 	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 
+	// Set when the window is moved/resized or a setting changes; OnPulse saves once it has settled.
+	bool SettingsDirty = false;
+	uint64_t SettingsChangedAt = 0;
+	// Alpha (EQ's window menu), column widths and closing the window don't notify us,
+	// so OnPulse compares them against the last values it saw. Empty until the first pulse.
+	std::vector<int> LastWatched;
+
 	CDPSAdvWnd();
 	~CDPSAdvWnd();
 	void DrawList(bool DoDead = false);
@@ -172,6 +181,10 @@ public:
 	void LoadLoc(char szChar[] = 0);
 	void LoadSettings();
 	void SaveLoc();
+	void MarkSettingsDirty();
+	void SaveIfSettled();
+	int OnMove(const CXRect& rect) override;
+	int OnResize(int w, int h) override;
 	void SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total = false, bool MeTop = false);
 	int WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown);
 	void SaveSetting(PCHAR Key, PCHAR Value, ...);
