@@ -5,7 +5,7 @@
 #include "MQ2DPSAdv.h"
 
 PreSetup("MQ2DPSAdv");
-PLUGIN_VERSION(1.6);
+PLUGIN_VERSION(1.7);
 
 // ############################### DPSEntry Start ############################################
 
@@ -75,7 +75,7 @@ bool DPSMob::DPSEntry::CheckMaster() {
 	if (Master != nullptr) return true;
 	if (Spawn && Spawn->MasterID > 0) {
 		PSPAWNINFO NewMaster = (PSPAWNINFO)GetSpawnByID(Spawn->MasterID);
-		if (NewMaster) {
+		if (NewMaster && NewMaster->Type == SPAWN_PLAYER) {
 			Master = Parent->GetEntry(NewMaster->DisplayedName, true, true);
 			return Master != nullptr;
 		}
@@ -160,6 +160,11 @@ DPSMob::DPSMob(const char* MobName, size_t MobLen) {
 		PetName = true;
 }
 
+DPSMob::~DPSMob() {
+	for (DPSEntry* Ent : EntList)
+		delete Ent;
+}
+
 void DPSMob::Init() {
 	strcpy_s(Name, "");
 	Damage.Total = 0;
@@ -171,7 +176,10 @@ void DPSMob::Init() {
 	Spawn = 0;
 	Active = false;
 	Dead = false;
+	InActive = false;
 	PetName = false;
+	Tag[0] = '\0';
+	Damage.AddTime = 0;
 }
 
 void DPSMob::GetSpawn() {
@@ -428,7 +436,7 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		DPSMob::DPSEntry* Ent = CurListMob->EntList[i];
 		if (Ent->Damage.Total == 0) break;
 		if (ShowMeTop && !strcmp(Ent->Name, pLocalPlayer->DisplayedName)) {
-			if (!ShowMeMin || (LineNum - RankAdj + 1) > ShowMeMinNum) FoundMe = true;
+			if (!ShowMeMin || (i + 1) > ShowMeMinNum) FoundMe = true;
 			ThisMe = true;
 		}
 		else ThisMe = false;
@@ -519,7 +527,8 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 4, MeColor);
 		LTopList->SetItemColor(LineNum, 5, MeColor);
 	}
-	else if (UseRaidColors && Ent->Class && (Ent->SpawnType == SPAWN_PLAYER || Ent->Mercenary)) {
+	else if (UseRaidColors && pRaidWnd && Ent->Class > 0 && Ent->Class <= TotalPlayerClasses
+		&& (Ent->SpawnType == SPAWN_PLAYER || Ent->Mercenary)) {
 		LTopList->SetItemColor(LineNum, 0, NormalColor);
 		LTopList->SetItemColor(LineNum, 1, pRaidWnd->ClassColors[ClassInfo[Ent->Class].RaidColorOrder]);
 		LTopList->SetItemColor(LineNum, 2, NormalColor);
@@ -534,6 +543,40 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 3, NormalColor);
 		LTopList->SetItemColor(LineNum, 4, NormalColor);
 		LTopList->SetItemColor(LineNum, 5, NormalColor);
+	}
+}
+
+int CDPSAdvWnd::OnMove(const CXRect& rect) {
+	MarkSettingsDirty();
+	return CCustomWnd::OnMove(rect);
+}
+
+int CDPSAdvWnd::OnResize(int w, int h) {
+	MarkSettingsDirty();
+	return CCustomWnd::OnResize(w, h);
+}
+
+void CDPSAdvWnd::MarkSettingsDirty() {
+	SettingsDirty = true;
+	SettingsChangedAt = GetTickCount64();
+}
+
+void CDPSAdvWnd::SaveIfSettled() {
+	constexpr uint64_t SettleMs = 1000;
+	bool changed = GetAlpha() != LastAlpha || GetFadeToAlpha() != LastFadeToAlpha || IsVisible() != LastVisible;
+	LastAlpha = GetAlpha();
+	LastFadeToAlpha = GetFadeToAlpha();
+	LastVisible = IsVisible();
+	for (int i = 0; i < 6; i++) {
+		const int width = LTopList->GetColumnWidth(i);
+		if (width != LastColumnWidths[i]) changed = true;
+		LastColumnWidths[i] = width;
+	}
+	if (changed && WatchStarted) MarkSettingsDirty();
+	WatchStarted = true;
+	if (SettingsDirty && GetTickCount64() - SettingsChangedAt >= SettleMs) {
+		SettingsDirty = false;
+		SaveLoc();
 	}
 }
 
@@ -671,6 +714,7 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
 	if (Message == XWM_CLOSE) CheckActive();
+	if ((Message == XWM_LCLICK || Message == XWM_NEWVALUE) && pWnd != LTopList) MarkSettingsDirty();
 	if (Message == XWM_RCLICK && pWnd == LTopList) LTopList->SetCurSel(-1);
 	else if (Message == XWM_CLOSE && pWnd == DPSWnd) CheckActive();
 	else if (Message == XWM_LCLICK) {
@@ -694,7 +738,7 @@ int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown
 				CListType = 2;
 				DPSMob* ListMob = nullptr;
 				int i = 0, x = 0;
-				for (i = 0; i < (int)MobList.size() - 1; i++) {
+				for (i = 0; i < (int)MobList.size(); i++) {
 					ListMob = MobList[i];
 					if (ListMob->SpawnType == 1 && ListMob->Active && !ListMob->IsPet() && !ListMob->Mercenary) {
 						if (x + 2 == (int)CMobList->GetCurChoice()) {
@@ -773,6 +817,16 @@ DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Create, bool Alive)
 	return nullptr;
 }
 
+// strncpy_s closes the game on a bad length, so reject the line instead.
+template <size_t N>
+bool CopyName(char(&Dest)[N], const char* Src, int Len) {
+	Dest[0] = 0;
+	if (Len <= 0 || Len >= (int)N)
+		return false;
+	strncpy_s(Dest, N, Src, Len);
+	return true;
+}
+
 template <unsigned int _EntSize, unsigned int _MobSize>
 bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_MobSize], int* Damage)
 {
@@ -801,16 +855,16 @@ bool SplitStringOtherHitOther(const char* Line, char(&EntName)[_EntSize], char(&
 		return false;
 	}
 
-	strncpy_s(EntName, &Line[0], HitPos);
-	EntName[HitPos] = 0;
+	if (!CopyName(EntName, Line, HitPos))
+		return false;
 	int DmgPos = find_substr(Line, " for ");
 	if (DmgPos == -1) {
 		return false;
 	}
 	int MobStart = HitPos + (int)strlen(OtherHits[Action]);
 	int MobLength = DmgPos - MobStart;
-	strncpy_s(MobName, &Line[MobStart], MobLength);
-	MobName[MobLength] = 0;
+	if (!CopyName(MobName, Line + MobStart, MobLength))
+		return false;
 
 	if (!_stricmp(MobName, "himself") || !_stricmp(MobName, "herself") || !_stricmp(MobName, "itself"))
 		strcpy_s(MobName, EntName);
@@ -853,8 +907,8 @@ bool SplitStringYouHitOther(const char* Line, char(&MobName)[_MobSize], int* Dam
 
 	MobStart = HitPos + (int)strlen(YourHits[Action]);
 	MobLength = DmgPos - MobStart;
-	strncpy_s(MobName, &Line[MobStart], MobLength);
-	MobName[MobLength] = 0;
+	if (!CopyName(MobName, Line + MobStart, MobLength))
+		return false;
 	return true;
 }
 
@@ -878,17 +932,21 @@ bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobNa
 	if (MobEnd <= 0) {
 		if (Debug) WriteChatf("NonMelee Failed, No MobEnd - Line: %s", Line);
 	} else {
-		if ((strstr(Line, pLocalPlayer->DisplayedName) || strstr(Line, "YOUR") || strstr(Line, " is "))) {
-			sprintf_s(temp, pLocalPlayer->DisplayedName);
+		const bool MyNonMelee = mq::starts_with(Line, std::string(pLocalPlayer->DisplayedName) + " hit ");
+		if (MyNonMelee || strstr(Line, "YOUR") || strstr(Line, " is ")) {
+			sprintf_s(temp, "%s", pLocalPlayer->DisplayedName);
 			if (strstr(Line, " YOUR ") || strstr(Line, " is ")) {
 				//Process your damage shields.
 				MobEnd = find_substr(Line, " is ");
 				sprintf_s(temp, " is ");
-				strncpy_s(MobName, &Line[0], MobEnd);
+				if (!CopyName(MobName, Line, MobEnd))
+					return false;
 			}
 			else {
 				//Normal Non-Melee
-				strncpy_s(MobName, &Line[strlen(temp) + 5], MobEnd - strlen(temp) - 5);
+				const int MobStart = (int)strlen(temp) + 5;
+				if (!CopyName(MobName, Line + MobStart, MobEnd - MobStart))
+					return false;
 			}
 			if (strstr(Line, " is ") && !strstr(Line, " YOUR ")) {
 				//Process other's Damage Shields.
@@ -898,19 +956,22 @@ bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobNa
 					//Thorns DS
 					EntEnd = find_substr(Line, "'s thorns for ");
 					EntStart = find_substr(Line, " pierced by ") + 12;
-					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+					if (!CopyName(EntName, Line + EntStart, EntEnd - EntStart))
+						return false;
 				}
 				else if (strstr(Line, " burned by ")) {
 					//Fire DS
 					EntEnd = find_substr(Line, "'s flames for ");
 					EntStart = find_substr(Line, " burned by ") + 11;
-					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+					if (!CopyName(EntName, Line + EntStart, EntEnd - EntStart))
+						return false;
 				}
 				else if (strstr(Line, " tormented by ")) {
 					//Frost DS
 					EntEnd = find_substr(Line, "'s frost for ");
 					EntStart = find_substr(Line, " tormented by ") + 14;
-					strncpy_s(EntName, &Line[EntStart], EntEnd - EntStart);
+					if (!CopyName(EntName, Line + EntStart, EntEnd - EntStart))
+						return false;
 				}
 				if (EntEnd < 0 || EntStart < 0)
 					return false;
@@ -938,14 +999,14 @@ bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobNa
 			return false;
 		}
 
-		strncpy_s(EntName, &Line[0], EntEnd);
-		EntName[EntEnd] = 0;
+		if (!CopyName(EntName, Line, EntEnd))
+			return false;
 
 		MobEnd = find_substr(Line, " for ");
 		if (MobEnd != -1) {
 			int MobLength = (int)(MobEnd - 5 - strlen(EntName));
-			strncpy_s(MobName, Line + EntEnd + 5, MobLength);
-			MobName[MobLength] = 0;
+			if (!CopyName(MobName, Line + EntEnd + 5, MobLength))
+				return false;
 			if (!strlen(MobName) || !strlen(EntName)) {
 				if (Debug) WriteChatf("NonMelee Fail: %s", Line);
 				return false;
@@ -970,9 +1031,7 @@ bool SplitStringDeath(const char* Line, char(&MobName)[_MobSize])
 	}
 	if (MobLength <= 0)
 		return false;
-	strncpy_s(MobName, Line + MobStart, MobLength);
-	MobName[MobLength] = 0;
-	return true;
+	return CopyName(MobName, Line + MobStart, MobLength);
 }
 
 template <unsigned int _EntSize, unsigned int _MobSize>
@@ -1003,20 +1062,26 @@ bool SplitStringDOT(const char* Line, char(&EntName)[_EntSize], char(&MobName)[_
 		if (MobEnd <= 0 || EntEnd <= 0)
 			return false;
 
+		// "<Mob> has taken <N> damage from <Spell> by <Caster>." -> caster is between " by " and the '.'.
 		int SpellNameStart = find_substr(Line, " damage from ");
 		int SpellNameEnd = find_substr(Line, " by ");
+		if (SpellNameStart < 0 || SpellNameEnd < 0)
+			return false;
 		char temp[MAX_STRING] = "";
-		strncpy_s(temp, &Line[SpellNameStart + 13], SpellNameEnd - SpellNameStart - 13);
-		int EntStart = find_substr(Line, temp) + (int)strlen(temp) + 4;
-		strcpy_s(EntName, &Line[EntEnd, EntStart]);
-		EntName[EntEnd - EntStart + 6] = 0;
+		if (!CopyName(temp, Line + SpellNameStart + 13, SpellNameEnd - SpellNameStart - 13))
+			return false;
+		const int SpellPos = find_substr(Line, temp);
+		if (SpellPos < 0)
+			return false;
+		const int EntStart = SpellPos + (int)strlen(temp) + 4;
+		if (!CopyName(EntName, Line + EntStart, EntEnd + 6 - EntStart))
+			return false;
 	}
-	strncpy_s(MobName, &Line[0], MobEnd);
+	if (!CopyName(MobName, Line, MobEnd))
+		return false;
 	int Corpse = find_substr(MobName, "'s corpse");
 	if (Corpse > 0)
 		MobName[Corpse] = 0;
-	else
-		MobName[MobEnd] = 0;
 	return true;
 }
 
@@ -1057,15 +1122,17 @@ void AddMyDamage(char* EntName, int Damage1) {
 			}
 		}
 	}
-	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %lu A: %lu  Pet B: %lu A: %lu Flag: %i", EntName, Damage1, MyTotalBefore, MyTotal, MyPetTotalBefore, MyPetTotal, flag1);
+	if (MyDebug) WriteChatf("[AddMyDamage] %s did %i Damage  My B: %llu A: %llu  Pet B: %llu A: %llu Flag: %i", EntName, Damage1, MyTotalBefore, MyTotal, MyPetTotalBefore, MyPetTotal, flag1);
 }
 
 void HandleNonMelee(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
+	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[HandleNonMelee] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[HandleNonMelee] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 	if (MyActive) AddMyDamage(EntName, Damage);
@@ -1075,8 +1142,10 @@ void HandleDOT(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
+	if (!SplitStringDOT(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[HandleDot] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[HandleDot] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 	if (MyActive) AddMyDamage(EntName, Damage);
@@ -1085,8 +1154,10 @@ void HandleDOT(const char* Line) {
 void HandleOtherHitOther(const char* Line) {
 	char EntName[256] = { 0 }, MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
+	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[OtherHitOther] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[OtherHitOther] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) {
 		if (DPSMob* mob = GetMob(MobName, true, true)) {
@@ -1101,8 +1172,10 @@ void HandleOtherHitOther(const char* Line) {
 void HandleYouHitOther(const char* Line) {
 	char MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringYouHitOther(Line, MobName, &Damage))
+	if (!SplitStringYouHitOther(Line, MobName, &Damage)) {
+		if (Debug) WriteChatf("[YouHitOther] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
 	if (pLocalPlayer) {
 		if (Active) {
@@ -1118,7 +1191,10 @@ void HandleYouHitOther(const char* Line) {
 
 void HandleDeath(const char* Line) {
 	char MobName[256] = { 0 };
-	if (!SplitStringDeath(Line, MobName)) return;
+	if (!SplitStringDeath(Line, MobName)) {
+		if (Debug) WriteChatf("[HandleDeath] Couldn't parse: %s", Line);
+		return;
+	}
 	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
 	if (Active) {
 		if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
@@ -1128,7 +1204,14 @@ void HandleDeath(const char* Line) {
 			}
 		}
 	}
-	if (MyActive) MyActive = false;
+	if (MyActive) {
+		bool MyFight = mq::starts_with(Line, "You have slain ");
+		if (!MyFight && pTarget) {
+			const char* TargetName = pTarget->DisplayedName;
+			MyFight = mq::ci_equals(TargetName, MobName) || mq::ci_equals(TargetName, std::string(MobName) + "'s corpse");
+		}
+		if (MyFight) MyActive = false;
+	}
 }
 
 void HandleDeath(DPSMob* DeadMob) {
@@ -1283,7 +1366,8 @@ void CreateDPSWindow() {
 
 void DestroyDPSWindow() {
 	if (DPSWnd) {
-		DPSWnd->SaveLoc();
+		// LoadLoc was skipped for a wrong UI file, so saving would overwrite the character's settings.
+		if (!WrongUI) DPSWnd->SaveLoc();
 		delete DPSWnd;
 		DPSWnd = nullptr;
 	}
@@ -1433,7 +1517,7 @@ public:
 					MyTime = 0;
 				}
 			}
-			else if (MyFirst & MyLast) {
+			else if (MyFirst && MyLast) {
 				MyTime = MyLast - MyFirst;
 			}
 			else {
@@ -1535,6 +1619,10 @@ PLUGIN_API void InitializePlugin()
 PLUGIN_API void ShutdownPlugin()
 {
 	DestroyDPSWindow();
+	for (DPSMob* Mob : MobList)
+		delete Mob;
+	MobList.clear();
+	LastMob = CurTarMob = CurListMob = CurMaxMob = nullptr;
 	RemoveCommand("/dpsadv");
 	// additions for DPS Meter
 	RemoveMQ2Data("DPSAdv");
@@ -1844,7 +1932,6 @@ void TargetSwitch() {
 void IntPulse() {
 	bool CChange = false;
 	CurMaxMob = nullptr;
-	const auto MobListSizeStart = MobList.size();
 	for (int i = 0; i < (int)MobList.size(); i++) {
 		DPSMob* Mob = MobList[i];
 		if (Mob == nullptr // Somehow this was a null pointer
@@ -1875,7 +1962,7 @@ void IntPulse() {
 			if (Mob->Active && !Mob->InActive && !Mob->Dead && !Mob->IsPet() && Mob->SpawnType == SPAWN_NPC && (int)Mob->Damage.Last > MaxDmgLast && (!CurMaxMob || Mob->Damage.Total > CurMaxMob->Damage.Total)) CurMaxMob = Mob;
 		}
 	}
-	if (MobListSizeStart > MobList.size() || CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob)
+	if (CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob)
 		ListSwitch(CurMaxMob);
 	if (CChange) DPSWnd->DrawCombo();
 	DPSWnd->DrawList();
@@ -1884,6 +1971,9 @@ void IntPulse() {
 
 PLUGIN_API void OnPulse() {
 	if (gGameState != GAMESTATE_INGAME || !pLocalPlayer) return;
+
+	CheckActive();
+	if (DPSWnd && !WrongUI) DPSWnd->SaveIfSettled();
 
 	if (Active && !WrongUI) {
 		if (LastMob && LastMob->LastEntry && LastMob->LastEntry->DoSort) LastMob->LastEntry->Sort();

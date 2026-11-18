@@ -15,6 +15,14 @@ tagline: "This plugin shows the dps output of you and people around you in a cus
 Shows the dps output of you and characters around you in a custom dps window.
 <!--desc-end-->
 
+## Features
+
+- Live DPS list for the current fight: rank, name, total damage, DPS, time and % of the fight's damage.
+- Pet damage is added to its owner's total (shown as `Name*`).
+- Pick which fight to show: your target, the highest damage fight, or any recent fight from the history dropdown.
+- Optional "show me at the top" row, total damage row and raid class colored names.
+- `/dpsadv mystart` / `mystop` track your own (and your pet's) DPS for a fight, available to macros through the `${DPSAdv}` TLO.
+
 ## Commands
 
 <a href="cmd-dpsadv/">
@@ -32,7 +40,8 @@ Shows the dps output of you and characters around you in a custom dps window.
 
 ## Settings
 
-These are the settings in the MQ2DPSAdv.ini
+These are the settings in `MQ2DPSAdv.ini`, in your MacroQuest `config` folder. Each character has its own `[CharacterName]` section.
+Edit the file only while the plugin is unloaded; otherwise the plugin's next save overwrites your changes.
 
 ```ini
 [CharacterName]
@@ -78,9 +87,7 @@ Explanations for these settings can be found on the [/dpsadv](cmd-dpsadv.md) com
 
 !!! question "How do I save the location?"
 
-    1. Move the window to where you want it to be saved and click the top right-hand corner to "exit" the window.
-    2. Re-open with a `/dpsadv show` and it will be in the new saved location.
-    3. Or you can move it and `/dpsadv save`
+    It saves automatically when you move or resize the window or change a setting. `/dpsadv save` saves immediately, but is normally not needed.
 
 ## Top-Level Objects
 

@@ -26,7 +26,7 @@ Adjust settings or view information on the MQ2DPSAdv plugin.
 | `show` | Shows the MQ2DPSAdv Window. |
 | `colors` | Shows the Raid Class Colors Window. |
 | `reload` | Reloads your settings from your MQ2DPSAdv.ini file. |
-| `save` | Save current settings to your MQ2DPSAdv.ini file. |
+| `save` | Save current settings to your MQ2DPSAdv.ini file right away. Normally not needed; settings are saved automatically. |
 | `listsize` | Displays the number of mobs in the DPS list. |
 | `copy` | Copies the MQ2DPSAdv Window location. |
 | `debug` | Toggles the on/off debug messages. |

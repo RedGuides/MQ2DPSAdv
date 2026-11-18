@@ -126,6 +126,9 @@ public:
 
 	DPSMob();
 	DPSMob(const char* MobName, size_t MobLen);
+	~DPSMob();
+	DPSMob(const DPSMob&) = delete;
+	DPSMob& operator=(const DPSMob&) = delete;
 	void Init();
 	void AddDamage(int Damage1);
 	void GetSpawn();
@@ -160,6 +163,14 @@ public:
 	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 
+	bool SettingsDirty = false;
+	uint64_t SettingsChangedAt = 0;
+	uint8_t LastAlpha = 0;
+	uint8_t LastFadeToAlpha = 0;
+	bool LastVisible = false;
+	int LastColumnWidths[6] = {};
+	bool WatchStarted = false;
+
 	CDPSAdvWnd();
 	~CDPSAdvWnd();
 	void DrawList(bool DoDead = false);
@@ -168,6 +179,10 @@ public:
 	void LoadLoc(char szChar[] = 0);
 	void LoadSettings();
 	void SaveLoc();
+	void MarkSettingsDirty();
+	void SaveIfSettled();
+	int OnMove(const CXRect& rect) override;
+	int OnResize(int w, int h) override;
 	void SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total = false, bool MeTop = false);
 	int WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown);
 	void SaveSetting(PCHAR Key, PCHAR Value, ...);
