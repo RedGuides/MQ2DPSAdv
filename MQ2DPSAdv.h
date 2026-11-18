@@ -5,8 +5,6 @@
 
 #include "mq/base/Color.h"
 
-#include <vector>
-
 const char* OtherHits[] = { " punches "," slashes "," crushes "," pierces "," hits "," kicks "," backstabs "," frenzies on "," bashes ", " strikes "," claws "," slices "," bites "," mauls "," stings ", " shoots ", " smashes ", " rends ", " gores ", " stabs ", "" };
 const char* YourHits[] = { " hit "," slash "," pierce "," crush "," kick "," punch "," backstab "," frenzy on "," bash ", " strike "," claw "," slice "," bite "," maul "," sting ", " shoot ", " smash ", " rend ", " gore ", ""};
 enum { CLISTTARGET, CLISTMAXDMG, SINGLE };
@@ -129,7 +127,6 @@ public:
 	DPSMob();
 	DPSMob(const char* MobName, size_t MobLen);
 	~DPSMob();
-	// Owns the entries in EntList, so copying would double delete them.
 	DPSMob(const DPSMob&) = delete;
 	DPSMob& operator=(const DPSMob&) = delete;
 	void Init();
@@ -166,12 +163,13 @@ public:
 	CEditWnd* THistoryLimit;
 	CComboWnd* CShowTotal;
 
-	// Set when the window is moved/resized or a setting changes; OnPulse saves once it has settled.
 	bool SettingsDirty = false;
 	uint64_t SettingsChangedAt = 0;
-	// Alpha (EQ's window menu), column widths and closing the window don't notify us,
-	// so OnPulse compares them against the last values it saw. Empty until the first pulse.
-	std::vector<int> LastWatched;
+	uint8_t LastAlpha = 0;
+	uint8_t LastFadeToAlpha = 0;
+	bool LastVisible = false;
+	int LastColumnWidths[6] = {};
+	bool WatchStarted = false;
 
 	CDPSAdvWnd();
 	~CDPSAdvWnd();

@@ -75,8 +75,6 @@ bool DPSMob::DPSEntry::CheckMaster() {
 	if (Master != nullptr) return true;
 	if (Spawn && Spawn->MasterID > 0) {
 		PSPAWNINFO NewMaster = (PSPAWNINFO)GetSpawnByID(Spawn->MasterID);
-		// Only fold pets into player masters. GetEntry(PCOnly) can't find an NPC master, so it
-		// would create a new entry for it on every check.
 		if (NewMaster && NewMaster->Type == SPAWN_PLAYER) {
 			Master = Parent->GetEntry(NewMaster->DisplayedName, true, true);
 			return Master != nullptr;
@@ -438,8 +436,6 @@ void CDPSAdvWnd::DrawList(bool DoDead) {
 		DPSMob::DPSEntry* Ent = CurListMob->EntList[i];
 		if (Ent->Damage.Total == 0) break;
 		if (ShowMeTop && !strcmp(Ent->Name, pLocalPlayer->DisplayedName)) {
-			// Pin me at the top only when I'm ranked below ShowMeMinNum (i + 1 is this row's rank;
-			// LineNum still points at the previous row here).
 			if (!ShowMeMin || (i + 1) > ShowMeMinNum) FoundMe = true;
 			ThisMe = true;
 		}
@@ -531,8 +527,7 @@ void CDPSAdvWnd::SetLineColors(int LineNum, DPSMob::DPSEntry* Ent, bool Total, b
 		LTopList->SetItemColor(LineNum, 4, MeColor);
 		LTopList->SetItemColor(LineNum, 5, MeColor);
 	}
-	else if (UseRaidColors && pRaidWnd && Ent->Class > 0 && Ent->Class < (int)std::size(ClassInfo)
-		&& ClassInfo[Ent->Class].RaidColorOrder < (int)std::size(pRaidWnd->ClassColors)
+	else if (UseRaidColors && pRaidWnd && Ent->Class > 0 && Ent->Class <= TotalPlayerClasses
 		&& (Ent->SpawnType == SPAWN_PLAYER || Ent->Mercenary)) {
 		LTopList->SetItemColor(LineNum, 0, NormalColor);
 		LTopList->SetItemColor(LineNum, 1, pRaidWnd->ClassColors[ClassInfo[Ent->Class].RaidColorOrder]);
@@ -566,19 +561,19 @@ void CDPSAdvWnd::MarkSettingsDirty() {
 	SettingsChangedAt = GetTickCount64();
 }
 
-// Moves/resizes fire every frame while dragging and edit boxes fire on every keystroke,
-// so wait until nothing has changed for a second before writing the ini.
 void CDPSAdvWnd::SaveIfSettled() {
 	constexpr uint64_t SettleMs = 1000;
-	std::vector<int> watched = { (int)GetAlpha(), (int)GetFadeToAlpha(), IsVisible() ? 1 : 0 };
-	if (LTopList) {
-		for (int i = 0; i <= 5 && i < LTopList->GetColumnCount(); i++)
-			watched.push_back(LTopList->GetColumnWidth(i));
+	bool changed = GetAlpha() != LastAlpha || GetFadeToAlpha() != LastFadeToAlpha || IsVisible() != LastVisible;
+	LastAlpha = GetAlpha();
+	LastFadeToAlpha = GetFadeToAlpha();
+	LastVisible = IsVisible();
+	for (int i = 0; i < 6; i++) {
+		const int width = LTopList->GetColumnWidth(i);
+		if (width != LastColumnWidths[i]) changed = true;
+		LastColumnWidths[i] = width;
 	}
-	if (watched != LastWatched) {
-		if (!LastWatched.empty()) MarkSettingsDirty();
-		LastWatched = std::move(watched);
-	}
+	if (changed && WatchStarted) MarkSettingsDirty();
+	WatchStarted = true;
 	if (SettingsDirty && GetTickCount64() - SettingsChangedAt >= SettleMs) {
 		SettingsDirty = false;
 		SaveLoc();
@@ -719,8 +714,6 @@ void CDPSAdvWnd::LoadLoc(char szChar[256]) {
 int CDPSAdvWnd::WndNotification(CXWnd* pWnd, unsigned int Message, void* unknown) {
 	if (Debug && Message != 21) WriteChatf("Notify: %i", Message);
 	if (Message == XWM_CLOSE) CheckActive();
-	// Checkbox/combo clicks and edit box changes update settings; save them once things settle.
-	// (Clicks on the list itself don't change anything worth saving.)
 	if ((Message == XWM_LCLICK || Message == XWM_NEWVALUE) && pWnd != LTopList) MarkSettingsDirty();
 	if (Message == XWM_RCLICK && pWnd == LTopList) LTopList->SetCurSel(-1);
 	else if (Message == XWM_CLOSE && pWnd == DPSWnd) CheckActive();
@@ -824,9 +817,7 @@ DPSMob* GetMob(CHAR(&Name)[_NameSize], bool Create, bool Alive)
 	return nullptr;
 }
 
-// Copy Len chars of Src into Dest and terminate it. Odd chat lines can make the computed
-// lengths negative or too long; strncpy_s would then call the invalid parameter handler and
-// close the game, so reject those lines instead.
+// strncpy_s closes the game on a bad length, so reject the line instead.
 template <size_t N>
 bool CopyName(char(&Dest)[N], const char* Src, int Len) {
 	Dest[0] = 0;
@@ -941,8 +932,6 @@ bool SplitStringNonMelee(const char* Line, char(&EntName)[_EntSize], char(&MobNa
 	if (MobEnd <= 0) {
 		if (Debug) WriteChatf("NonMelee Failed, No MobEnd - Line: %s", Line);
 	} else {
-		// Only treat it as ours when the line starts with "<MyName> hit ". A bare strstr also
-		// matched "<MyName>`s pet hit ..." and longer names that contain ours.
 		const bool MyNonMelee = mq::starts_with(Line, std::string(pLocalPlayer->DisplayedName) + " hit ");
 		if (MyNonMelee || strstr(Line, "YOUR") || strstr(Line, " is ")) {
 			sprintf_s(temp, "%s", pLocalPlayer->DisplayedName);
@@ -1140,8 +1129,10 @@ void HandleNonMelee(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage))
+	if (!SplitStringNonMelee(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[HandleNonMelee] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[HandleNonMelee] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 	if (MyActive) AddMyDamage(EntName, Damage);
@@ -1151,8 +1142,10 @@ void HandleDOT(const char* Line) {
 	CHAR EntName[256] = { 0 };
 	CHAR MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringDOT(Line, EntName, MobName, &Damage))
+	if (!SplitStringDOT(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[HandleDot] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[HandleDot] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) GetMob(MobName, true, true)->GetEntry(EntName)->AddDamage(Damage);
 	if (MyActive) AddMyDamage(EntName, Damage);
@@ -1161,8 +1154,10 @@ void HandleDOT(const char* Line) {
 void HandleOtherHitOther(const char* Line) {
 	char EntName[256] = { 0 }, MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage))
+	if (!SplitStringOtherHitOther(Line, EntName, MobName, &Damage)) {
+		if (Debug) WriteChatf("[OtherHitOther] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[OtherHitOther] \ap%s \awhit \ap%s \awfor \ar%i", EntName, MobName, Damage);
 	if (Active) {
 		if (DPSMob* mob = GetMob(MobName, true, true)) {
@@ -1177,8 +1172,10 @@ void HandleOtherHitOther(const char* Line) {
 void HandleYouHitOther(const char* Line) {
 	char MobName[256] = { 0 };
 	int Damage;
-	if (!SplitStringYouHitOther(Line, MobName, &Damage))
+	if (!SplitStringYouHitOther(Line, MobName, &Damage)) {
+		if (Debug) WriteChatf("[YouHitOther] Couldn't parse: %s", Line);
 		return;
+	}
 	if (Debug) WriteChatf("[YouHitOther] \apYou \awhit \ap%s \awfor \ar%i \awdamage!", MobName, Damage);
 	if (pLocalPlayer) {
 		if (Active) {
@@ -1194,7 +1191,10 @@ void HandleYouHitOther(const char* Line) {
 
 void HandleDeath(const char* Line) {
 	char MobName[256] = { 0 };
-	if (!SplitStringDeath(Line, MobName)) return;
+	if (!SplitStringDeath(Line, MobName)) {
+		if (Debug) WriteChatf("[HandleDeath] Couldn't parse: %s", Line);
+		return;
+	}
 	if (Debug) WriteChatf("[HandleDeath] Death Name: \ap%s", MobName);
 	if (Active) {
 		if (DPSMob* DeadMob = GetMob(MobName, false, true)) {
@@ -1204,8 +1204,6 @@ void HandleDeath(const char* Line) {
 			}
 		}
 	}
-	// Stop the "my DPS" capture when your fight ends: your kill, or your target died.
-	// Other people's kills nearby used to stop it too.
 	if (MyActive) {
 		bool MyFight = mq::starts_with(Line, "You have slain ");
 		if (!MyFight && pTarget) {
@@ -1368,8 +1366,7 @@ void CreateDPSWindow() {
 
 void DestroyDPSWindow() {
 	if (DPSWnd) {
-		// A wrong/outdated UI file may be missing the list, and LoadLoc was skipped,
-		// so saving would crash or overwrite the character's settings with defaults.
+		// LoadLoc was skipped for a wrong UI file, so saving would overwrite the character's settings.
 		if (!WrongUI) DPSWnd->SaveLoc();
 		delete DPSWnd;
 		DPSWnd = nullptr;
@@ -1965,8 +1962,6 @@ void IntPulse() {
 			if (Mob->Active && !Mob->InActive && !Mob->Dead && !Mob->IsPet() && Mob->SpawnType == SPAWN_NPC && (int)Mob->Damage.Last > MaxDmgLast && (!CurMaxMob || Mob->Damage.Total > CurMaxMob->Damage.Total)) CurMaxMob = Mob;
 		}
 	}
-	// Only follow the max damage mob in that list mode. A purge never removes CurListMob
-	// (it's excluded above), so it's no reason to change what the user is looking at.
 	if (CListType == CLISTMAXDMG && CurMaxMob && CurMaxMob != CurListMob)
 		ListSwitch(CurMaxMob);
 	if (CChange) DPSWnd->DrawCombo();
@@ -1977,8 +1972,6 @@ void IntPulse() {
 PLUGIN_API void OnPulse() {
 	if (gGameState != GAMESTATE_INGAME || !pLocalPlayer) return;
 
-	// XWM_CLOSE arrives before the window is hidden, and other things can hide it too
-	// (/windowstate, macros), so keep Active in step with visibility here.
 	CheckActive();
 	if (DPSWnd && !WrongUI) DPSWnd->SaveIfSettled();
 
